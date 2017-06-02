@@ -11,7 +11,7 @@ module arm_alu (output reg [31:0] result, output reg N_flag, Z_flag, C_flag, V_f
 				C_flag = carry;
 				update_N_Z_flags();
 			end
-		4'b0001: //[EOR] Logical Exclusive OR
+		4'b0001: //[EOR] Logical Exclusive OR This is a Logical Exclusive OR!!
 			begin
 				result = (dataA & ~dataB) | (~dataA & dataB);
 				C_flag = carry;
