@@ -371,9 +371,7 @@ end
 
 always @ (enc_in)
 begin
-	case (tempEnc_in[27:25])
-
-		3'b000:
+	if(tempEnc_in[27:25]==3'b000)
 
 			begin
 
@@ -416,9 +414,7 @@ begin
 							
 							begin
 
-								case (tempEnc_in[21])
-
-									1'b0: 
+								if(tempEnc_in[21]== 1'b0) 
 
 										begin 
 
@@ -436,7 +432,7 @@ begin
 										
 										end
 
-									1'b1: 
+									if(tempEnc_in[21]== 1'b1) 
 
 										begin 
 
@@ -453,19 +449,17 @@ begin
 													enc_out = 6'b100100; //36 = Immediate Pre-Indexed Store MISCELLANEOUS
 										end
 
-								endcase
-
 							end
 
 					end
 
 			end
 
-		3'b001:
+		if(tempEnc_in[27:25]==3'b001)
 
 			enc_out = 6'b000110; //6 = 32-bit Immediate Shifter Operand
 
-		3'b010:
+		if(tempEnc_in[27:25]==3'b010)
 
 			begin
 
@@ -491,9 +485,7 @@ begin
 
 					begin
 
-						case (tempEnc_in[21])
-
-							1'b0: 
+						if(tempEnc_in[21]==1'b0)
 								
 								begin
 									
@@ -511,7 +503,7 @@ begin
 								
 								end
 
-							1'b1: 
+							if(tempEnc_in[21]==1'b1) 
 								
 								begin
 
@@ -528,13 +520,10 @@ begin
 											enc_out = 6'b001110; //14 = Immediate Pre-Indexed Store
 								
 								end
-
-						endcase
-
 					end
 			end
 
-		3'b011:
+		if(tempEnc_in[27:25]==3'b011)
 
 			begin
 
@@ -560,9 +549,7 @@ begin
 
 					begin
 
-						case (tempEnc_in[21])
-
-							1'b0: 
+						if(tempEnc_in[21]==1'b0)
 								
 								begin 
 
@@ -580,7 +567,7 @@ begin
 
 								end
 							
-							1'b1: 
+							if(tempEnc_in[21]==1'b1) 
 
 								begin
 
@@ -596,14 +583,11 @@ begin
 
 											enc_out = 6'b001111; //15 = Register Pre-Indexed Store
 								end
-
-						endcase
-
 					end
 
 			end
 
-		3'b101:
+		if(tempEnc_in[27:25]==3'b101)
 
 			begin
 
@@ -624,8 +608,6 @@ begin
 					end
 
 			end
-
-	endcase
 
 	begin
 	if (tempEnc_in == 31'h00000000)
