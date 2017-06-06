@@ -199,7 +199,7 @@ reg [5:0] nxSt;
 
 PipelineRegister pipe_reg (tempPipe, rom_out, clk);
 
-Input_Manager input_man (im_out, flags, cu_in [31:28]);
+input_manager input_man (im_out, flags, cu_in [31:28]);
 
 mux_2to1_1bit MuxH (Mh_out, tempPipe[15], im_out, mfc);
 
@@ -213,9 +213,9 @@ Microstore_ROM rom (rom_out, Mk_out);
 
 incrementer inc (inc_out, Mk_out);
 
-IncrementerRegister incReg (incR_out, inc_out, clk);
+incrementer_register incReg (incR_out, inc_out, clk);
 
-Nxt_St_Sel next_state (next_state_out [0], next_state_out [1], inv_out, tempPipe[2:0]);
+next_state_select next_state (next_state_out [0], next_state_out [1], inv_out, tempPipe[2:0]);
 
 Inverter inverter (inv_out, Mh_out, tempPipe[54]);
 
@@ -715,7 +715,7 @@ endmodule
 //--------------------------------------------------------------------
 //					Incrementer Register
 //--------------------------------------------------------------------
-module IncrementerRegister (output reg [5:0] out, input [5:0] in, input clk);
+module incrementer_register (output reg [5:0] out, input [5:0] in, input clk);
 
 always @(posedge clk)	
     out <= in;	
@@ -728,7 +728,7 @@ endmodule
 //					INPUT Signals MANAGER
 //-----------------------------------------------------------------
 
-module Input_Manager (output reg out, input [3:0] Flags, cond_Code);
+module input_manager (output reg out, input [3:0] Flags, cond_Code);
 
 /*
 Flags[0] = Negative Flag
@@ -842,9 +842,15 @@ endmodule
 
 
 
-//-------------------------------------------------------------
-//					INVERTER
-//-------------------------------------------------------------
+/********************************************************************************/
+/*					                 Inverter                                   */
+//Input
+//in: lo que sale del MUX 2x1
+//invtr: inv
+
+//Output
+//out: (STS)
+/********************************************************************************/
 
 module Inverter (output reg out, input in, invtr);
 
@@ -1013,9 +1019,18 @@ end
 endmodule
 
 
-//--------------------------------------------------------------------
-//					Multiplexer 1 bit 2 to 1
-//--------------------------------------------------------------------
+/********************************************************************************/
+/*					                    Mux 1                                   */
+//Provee el input del inverter
+//Input
+//S: (MFA... control register bit 13)
+//DO: im_out (output del input manager)
+//D1: mfc 
+
+
+//Output
+//Y: (lo que entra al inverter)
+/********************************************************************************/
 module mux_2to1_1bit (output reg Y, input S,
 		 input D0, input D1);
 
@@ -1098,7 +1113,19 @@ endcase
 endmodule
 
 
+/********************************************************************************/
+/*										Mux 2                                   */
+//Input
+//S: (2 bits M0 M1, output next state selector)
+//DO: (output encoder)
+//D1: (NextSt1) (output control register [8:3])
+//D2: 1 (hardcoded #1)
+//D3: (output incrementer)
 
+//Output
+
+
+/********************************************************************************/
 module mux_4to1_6bits (output reg [5:0] Y, input [1:0] S,
 		 input [5:0] D0, input [5:0] D1, input [5:0] D2, input [5:0] D3);
 
@@ -1115,8 +1142,16 @@ endcase
 
 endmodule
 
-//Multiplexer 6 bits 2 to 1
+/********************************************************************************/
+/*					                   Mux 3                                    */
+//Input
+//S: RESET
+//D0: (hardcoded ZERO)
+//D1: (output MUX 2)
 
+//Output
+//Y: Entra al incrementer y al microstore
+/********************************************************************************/
 module mux_2to1_6bits (output reg [5:0] Y, input S,
 		 input [5:0] D0, input [5:0] D1);
 
@@ -1200,11 +1235,18 @@ endcase
 
 endmodule
 
-//---------------------------------------------------------------
-//                  NEXT STATE ADDRESS SELECTOR
-//---------------------------------------------------------------
+/********************************************************************************/
+/*                                   Next State                                 */
 
-module Nxt_St_Sel (output reg M0, output reg M1, input cond_S, input [2:0] pipeline);
+//Input
+//cond_S: Output of previous inverter (STS)
+//pipeline: N0 - N2 (NxStaSel) 
+
+//Output
+//M0 (M0)
+//M1 (M0)
+/********************************************************************************/
+module next_state_select (output reg M0, output reg M1, input cond_S, input [2:0] pipeline);
 
 initial begin
 	M0 = 1'b1;
