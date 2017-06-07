@@ -1425,7 +1425,7 @@ endmodule
 
 
 //--------------------------------------------------------
-//				Register File
+//				Register File v2
 //--------------------------------------------------------
 module register_file (output reg [31:0] PA, PB, input [31:0] PC, input [3:0] readA, readB, writeA, input enable, clr, clk);
 
