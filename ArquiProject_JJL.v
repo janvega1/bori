@@ -1,155 +1,139 @@
 //--------------------------------------------------------------------
 //					ALU  	(Not Present)
 //--------------------------------------------------------------------
-module arm_alu (output reg [31:0] result, output reg N_flag, Z_flag, C_flag, V_flag, input [3:0] op_code, input [31:0] dataA, dataB, input carry);
-reg [31:0] temp;
-always @ (*)
-case (op_code)
-		4'b0000: //[AND] Logical AND
-		begin
-		result = dataA & dataB;
-		C_flag = carry;
-		update_N_Z_flags();
-		end
-		4'b0001: //[EOR] Logical Exclusive OR This is a Logical Exclusive OR!!
-		begin
-		result = (dataA & ~dataB) | (~dataA & dataB);
-		C_flag = carry;
-		update_N_Z_flags();
-		end
-		4'b0010: //[SUB] Subtract
-		begin
-		{C_flag, result} = dataA - dataB;
-		if((dataA[31] == 0 && dataB[31] == 1 && result[31] == 1) || (dataA[31] == 1 && dataB[31] == 0 && result[31] == 0))
-		V_flag = 1;
-		else
-		V_flag = 0;
-		update_N_Z_flags();
-		end
-		4'b0011: //[RSB] Reverse Subtract
-		begin
-		{C_flag, result} = dataB - dataA;
-		if((dataB[31] == 0 && dataA[31] == 1 && result[31] == 1) || (dataB[31] == 1 && dataA[31] == 0 && result[31] == 0))
-		V_flag = 1;
-		else
-		V_flag = 0;
-		update_N_Z_flags();
-		end
-		4'b0100: //[ADD] Add
-		begin
-		{C_flag, result} = dataA + dataB;
-		if((dataA[31] == 0 && dataB[31] == 0 && result[31] == 1) || (dataA[31] == 1 && dataB[31] == 1 && result[31] == 0))
-		V_flag = 1;
-		else
-		V_flag = 0;
-		update_N_Z_flags();
-		end
-		4'b0101: //[ADC] Add with Carry
-		begin
-		{C_flag, result} = dataA + dataB + carry;
-		if((dataA[31] == 0 && dataB[31] == 0 && result[31] == 1) || (dataA[31] == 1 && dataB[31] == 1 && result[31] == 0))
-		V_flag = 1;
-		else
-		V_flag = 0;
-		update_N_Z_flags();
-		end
-		4'b0110: //[SBC] Subtract with Carry
-		begin
-		{C_flag, result} = dataA - dataB + carry;
-		if((dataA[31] == 0 && dataB[31] == 1 && result[31] == 1) || (dataA[31] == 1 && dataB[31] == 0 && result[31] == 0))
-		V_flag = 1;
-		else
-		V_flag = 0;
-		update_N_Z_flags();
-		end
-		4'b0111: //[RSC] Reverse Subtract with Carry
-		begin
-		{C_flag, result} = dataB - dataA + carry;
-		if((dataB[31] == 0 && dataA[31] == 1 && result[31] == 1) || (dataB[31] == 1 && dataA[31] == 0 && result[31] == 0))
-		V_flag = 1;
-		else
-		V_flag = 0;
-		update_N_Z_flags();
-		end
-		4'b1000: //[TST] Test
-		begin
-		temp = dataA & dataB;
-		C_flag = carry;
-		N_flag = temp[31];
-		if(temp == 0) 
-		Z_flag = 1;
-		else 
-		Z_flag = 0;
-		end
-		4'b1001: //[TEQ] Test Equivalence
-		begin
-		temp = (dataA & ~dataB) | (~dataA & dataB);
-		C_flag = carry;
-		N_flag = temp[31];
-		if(temp == 0) 
-		Z_flag = 1;
-		else 
-		Z_flag = 0;
-		end
-		4'b1010: //[CMP] Compare
-		begin
-		{C_flag, temp} = dataA - dataB;
-		N_flag = temp[31];
-		if(temp == 0) 
-		Z_flag = 1;
-		else 
-		Z_flag = 0;
-		end
-		4'b1011: //[CMN] Compare Negated
-		begin
-		{C_flag, temp} = dataA + dataB;
-		N_flag = temp[31];
-		if(temp == 0) 
-		Z_flag = 1;
-		else 
-		Z_flag = 0;
-		end
-		4'b1100: //[ORR] Logical OR
-		begin
-		result = dataA | dataB;
-		C_flag = carry;
-		update_N_Z_flags();
-		end
-		4'b1101: //[MOV] Move
-		begin
-		result = dataB;
-		C_flag = carry;
-		update_N_Z_flags();
-		end
-		4'b1110: //[BIC] Bit Clear
-		begin
-		result = dataA & ~dataB;
-		C_flag = carry;
-		update_N_Z_flags();
-		end
-		4'b1111: //[MVN] Move Not
-		begin	
-		result = ~dataB;
-		C_flag = carry;
-		update_N_Z_flags();
-		end
-		/*5'b10000: //Add 4 PC
-			begin
-				result = dataB + 4;
-				end*/
-				endcase
 
-	task update_N_Z_flags; //Update the N & Z flags
-	begin
-	N_flag = result[31];
-	if(result == 0) 
-	Z_flag = 1;
-	else 
-	Z_flag = 0;
-	end
-	endtask
-
-	endmodule
+module ALU(output reg [31:0] res, output reg Z_flag, N_flag, C_flag, V_flag, 
+    input [31:0] A, B, input [3:0] op, input Cin);
+  always @ (A, B, op, Cin)
+    begin
+         case(op)
+         4'b0000: //AND
+         	begin
+                res = A & B;
+                C_flag = Cin;
+            end
+         4'b0001: //EOR
+         	begin
+                res = A ^ B;
+                C_flag = Cin;
+            end
+         4'b0010: // SUB
+         	begin
+                {C_flag, res} = A - B;
+                C_flag = ~C_flag;
+                if((A[31] == 0 && B[31] == 1 && res[31] == 1) || 
+                   (A[31] == 1 && B[31] == 0 && res[31] == 0)) //Options for overflow = 1
+                   V_flag = 1;
+                else 
+                   V_flag = 0;
+            end
+         4'b0011: // RSB
+         	begin
+                {C_flag, res} = B - A;
+                C_flag = ~C_flag;
+                 if((A[31] == 0 && B[31] == 1 && res[31] == 1) || 
+                   (A[31] == 1 && B[31] == 0 && res[31] == 0)) //Options for overflow = 1
+                   V_flag = 1;
+                else 
+                   V_flag = 0;
+             end
+         4'b0100: // ADD
+         	begin
+                {C_flag, res} = A + B;
+                if((A[31]==0 && B[31]==0 && res[31]==1) ||
+                   (A[31]==1 && B[31]==1 && res[31]==0)) //Options for overflow = 1
+                   V_flag = 1;
+                else 
+                   V_flag = 0;
+            end
+         4'b0101: //ADC
+         	begin
+                {C_flag, res} = A + B + Cin;
+                if((A[31]==0 && B[31]==0 && res[31]==1) ||
+                   (A[31]==1 && B[31]==1 && res[31]==0)) //Options for overflow = 1
+                   V_flag = 1;
+                else 
+                   V_flag = 0;
+            end
+         4'b0110: // SBC
+            begin
+                C_flag = ~C_flag;
+                {C_flag, res} = A - B;
+                C_flag = ~C_flag;
+                if((A[31] == 0 && B[31] == 1 && res[31] == 1) || 
+                   (A[31] == 1 && B[31] == 0 && res[31] == 0)) //Options for overflow = 1
+                   V_flag = 1;
+                else 
+                   V_flag = 0;
+             end
+         4'b0111: // RSC
+         	begin
+                C_flag = ~C_flag;
+                {C_flag, res} = B - A;
+                C_flag = ~C_flag;
+                if((A[31] == 0 && B[31] == 1 && res[31] == 1) || 
+                   (A[31] == 1 && B[31] == 0 && res[31] == 0)) //Options for overflow = 1
+                   V_flag = 1;
+                else 
+                   V_flag = 0;
+            end
+         4'b1000: // TST
+         	begin
+                res = A & B;
+                C_flag = Cin;
+            end
+         4'b1001: // TEQ
+         	begin
+                res = A ^ B;
+                C_flag = Cin; 
+            end
+         4'b1010: // CMP
+         	begin
+                {C_flag, res} = A - B;
+                C_flag = ~C_flag;
+                if((A[31] == 0 && B[31] == 1 && res[31] == 1) || 
+                   (A[31] == 1 && B[31] == 0 && res[31] == 0)) //Options for overflow = 1
+                   V_flag = 1;
+                else 
+                   V_flag = 0;
+            end
+         4'b1011: //CMN
+         	begin
+                {C_flag, res} = A + B;
+                if((A[31]==0 && B[31]==0 && res[31]==1) ||
+                   (A[31]==1 && B[31]==1 && res[31]==0)) //Options for overflow = 1
+                   V_flag = 1;
+                else 
+                   V_flag = 0;
+            end
+         4'b1100: //ORR
+         	begin
+                res = A | B;
+                C_flag = Cin;
+            end
+         4'b1101: // MOV
+         	begin
+                res = B;
+                C_flag = Cin;
+            end
+         4'b1110: //BIC
+         	begin
+                res = A & ~B;
+                C_flag = Cin;
+            end
+         4'b1111: // MVN
+         	begin
+                res = ~B;
+                C_flag = Cin;
+            end
+         endcase
+         N_flag = res[31];
+         if(res == 0)
+            Z_flag = 1;
+         else
+            Z_flag = 0;
+    end
+endmodule
 
 
 //--------------------------------------------------------------------
@@ -288,7 +272,7 @@ mux_2to1_4bits MuxO (opcode_in, Mo, cu_opcode, wireIR[24:21]);
 
 mux_2to1_1bit MuxS (StatusRegEn, Ms, StatusRegEn_cu, ~wireIR[20]);
 
-arm_alu alu (ALU_Out, Flags [0], Flags [1], Flags[2], Flags [3], opcode_in, RFOut_A, Shf_Out, carry);
+ALU alu (ALU_Out, Flags [0], Flags [1], Flags[2], Flags [3], opcode_in, RFOut_A, Shf_Out, carry);
 
 branch_extender branchExt (BranchExt_Out, wireIR[23:0]);
 
@@ -298,13 +282,13 @@ Sign_Extension2 signExt2 (SignExt_Out2, Mc_Out, dataType, SignExtEn2);
 
 Shifter shift (Shf_Out, Flags [2], Ma_Out, wireIR[6:5], Md_Out, SHFen);
 
-register_32_bits InsReg (wireIR, MemOut, IREn, clr, clk);
+register_32bits InsReg (wireIR, MemOut, IREn, clr, clk);
 
-register_32_bits StaReg (tempStaReg, Flags, StatusRegEn, clr, clk);
+register_32bits StaReg (tempStaReg, Flags, StatusRegEn, clr, clk);
 
-register_32_bits Mar (MAR_Out, ALU_Out, MAREn, clr, clk);
+register_32bits Mar (MAR_Out, ALU_Out, MAREn, clr, clk);
 
-register_32_bits Mdr (MDR_Out, SignExt_Out2, MDREn, clr, clk);
+register_32bits Mdr (MDR_Out, SignExt_Out2, MDREn, clr, clk);
 
 Ram ram (MDR_Out, MemEN, r_w, mfa, dataType, dwp, MAR_Out [7:0], tempMfc, MemOut);
 
@@ -327,6 +311,7 @@ end
 else if(in == 4'b0010) begin
 	out = 16'b0000000000000100;
 end 
+
 
 else if(in == 4'b0011) begin
 	out = 16'b0000000000001000;;
@@ -364,6 +349,7 @@ else if(in == 4'b1011) begin
 	out = 16'b0000100000000000;
 end 
 
+
 else if(in == 4'b1100) begin
 	out = 16'b0001000000000000;
 end 
@@ -394,10 +380,16 @@ end
 endmodule
 
 
+
 //--------------------------------------------------------------------
 //					Encoder
 //--------------------------------------------------------------------
 module encoder (output reg [5:0] enc_out, input [31:0] enc_in, input clk);
+
+						if(tempEnc_in[21]==1'b0)
+								
+								begin 
+
 
 reg [31:0] tempEnc_in;
 
@@ -415,10 +407,12 @@ begin
 		enc_out = 6'b000101; 
 	end
 
+
 	//7 = Shift by Immediate Shifter Operand
 	else if (tempEnc_in[27:25] == 3'b000 && tempEnc_in[4] == 1'b0 && tempEnc_in[11:7] != 5'b00000) begin 
 		enc_out = 6'b000111; 
 	end
+
 
 	//41 = Immediate Post-Indexed Load MISCELLANEOUS
 	if (tempEnc_in[27:25] == 3'b000 && tempEnc_in[4] == 1'b1 && tempEnc_in[24] == 1'b0 && tempEnc_in[20] == 1'b1) begin
@@ -446,6 +440,7 @@ begin
 		enc_out = 6'b101000; 
 	end
 
+
 	//36 = Immediate Pre-Indexed Store MISCELLANEOUS
 	if (tempEnc_in[27:25] == 3'b000 && tempEnc_in[4] == 1'b1 && tempEnc_in[24] != 1'b0 && tempEnc_in[21] == 1'b1 && tempEnc_in[20] != 1'b1 ) begin
 		enc_out = 6'b100100; 
@@ -461,15 +456,18 @@ begin
 		enc_out = 6'b011000; 
 	end
 
+
 	//16 = Immediate Post-Indexed Store
 	if (tempEnc_in[27:25] == 3'b010 && tempEnc_in[24] == 1'b0 && tempEnc_in[20] != 1'b1 ) begin
 		enc_out = 6'b010000; 
 	end
 
+
 	//20 = Immediate Offset Load
 	if (tempEnc_in[27:25] == 3'b010 && tempEnc_in[24] != 1'b0 && tempEnc_in[21] == 1'b0  && tempEnc_in[20] == 1'b1) begin
 		enc_out = 6'b010100; 
 	end
+
 
 	//20 = Immediate Offset Load
 	if (tempEnc_in[27:25] == 3'b010 && tempEnc_in[24] != 1'b0 && tempEnc_in[21] == 1'b0  && tempEnc_in[20] != 1'b1) begin
@@ -521,12 +519,14 @@ begin
 		enc_out = 6'b101011; 
 	end
 
+
 	//44 = Branch with Link
 	if (tempEnc_in[27:25] == 3'b101 && tempEnc_in[24] != 1'b0) begin
 		enc_out	= 6'b101100; 
 	end
 
 	if (tempEnc_in == 31'h00000000) begin
+
 		enc_out=6'b000000;
 	end
 
@@ -1383,17 +1383,17 @@ endmodule
 
 
 //--------------------------------------------------------
-//				Register FIle
+//				Register File v2
 //--------------------------------------------------------
-module register_file (output reg [31:0] outA, outB, input [31:0] dataIn, input [3:0] readA, readB, writeA, input enable, clr, clk);
+module register_file (output reg [31:0] PA, PB, input [31:0] PC, input [3:0] readA, readB, writeA, input enable, clr, clk);
 
 reg decoder_enable;
 
-wire [31:0] temp;
-wire [31:0] temp1;
-wire [15:0] decoder_out;
-wire [31:0] register_out0, register_out1, register_out2, register_out3, register_out4, register_out5, register_out6, register_out7,
-register_out8, register_out9, register_out10, register_out11, register_out12, register_out13, register_out14, register_out15;
+
+wire [31:0] tempA;
+wire [31:0] tempB;
+wire [15:0] dec_out;
+wire [31:0] R0_out,R1_out,R2_out,R3_out,R4_out,R5_out,R6_out,R7_out,R8_out,R9_out,R10_out,R11_out,R12_out,R13_out,R14_out,R15_out;
 
 always @ (enable)
 begin 
@@ -1418,39 +1418,36 @@ end
 
 always @ (*)
 begin
-outA = temp;
-outB = temp1;
+
+	PA = tempA;
+	PB = tempB;
+
 end
 
 
-decoder dec (decoder_out, writeA, decoder_enable);
 
-register_32_bits register0 (register_out0, dataIn, ~decoder_out[0], clr, clk);
-register_32_bits register1 (register_out1, dataIn, ~decoder_out[1], clr, clk);
-register_32_bits register2 (register_out2, dataIn, ~decoder_out[2], clr, clk);
-register_32_bits register3 (register_out3, dataIn, ~decoder_out[3], clr, clk);
-register_32_bits register4 (register_out4, dataIn, ~decoder_out[4], clr, clk);
-register_32_bits register5 (register_out5, dataIn, ~decoder_out[5], clr, clk);
-register_32_bits register6 (register_out6, dataIn, ~decoder_out[6], clr, clk);
-register_32_bits register7 (register_out7, dataIn, ~decoder_out[7], clr, clk);
-register_32_bits register8 (register_out8, dataIn, ~decoder_out[8], clr, clk);
-register_32_bits register9 (register_out9, dataIn, ~decoder_out[9], clr, clk);
-register_32_bits register10 (register_out10, dataIn, ~decoder_out[10], clr, clk);
-register_32_bits register11 (register_out11, dataIn, ~decoder_out[11], clr, clk);
-register_32_bits register12 (register_out12, dataIn, ~decoder_out[12], clr, clk);
-register_32_bits register13 (register_out13, dataIn, ~decoder_out[13], clr, clk);
-register_32_bits register14 (register_out14, dataIn, ~decoder_out[14], clr, clk);
-register_32_bits register15 (register_out15, dataIn, ~decoder_out[15], clr, clk);
+decoder dec (dec_out, writeA, decoder_enable);
 
+register_32bits register0  (R0_out, PC, ~dec_out[0], clr, clk);
+register_32bits register1  (R1_out, PC, ~dec_out[1], clr, clk);
+register_32bits register2  (R2_out, PC, ~dec_out[2], clr, clk);
+register_32bits register3  (R3_out, PC, ~dec_out[3], clr, clk);
+register_32bits register4  (R4_out, PC, ~dec_out[4], clr, clk);
+register_32bits register5  (R5_out, PC, ~dec_out[5], clr, clk);
+register_32bits register6  (R6_out, PC, ~dec_out[6], clr, clk);
+register_32bits register7  (R7_out, PC, ~dec_out[7], clr, clk);
+register_32bits register8  (R8_out, PC, ~dec_out[8], clr, clk);
+register_32bits register9  (R9_out, PC, ~dec_out[9], clr, clk);
+register_32bits register10 (R10_out, PC, ~dec_out[10], clr, clk);
+register_32bits register11 (R11_out, PC, ~dec_out[11], clr, clk);
+register_32bits register12 (R12_out, PC, ~dec_out[12], clr, clk);
+register_32bits register13 (R13_out, PC, ~dec_out[13], clr, clk);
+register_32bits register14 (R14_out, PC, ~dec_out[14], clr, clk);
+register_32bits register15 (R15_out, PC, ~dec_out[15], clr, clk);
 
+mux_16to1 muxA (tempA, readA, R0_out, R1_out, R2_out, R3_out, R4_out, R5_out, R6_out, R7_out, R8_out, R9_out, R10_out, R11_out, R12_out, R13_out, R14_out, R15_out);
+mux_16to1 muxB (tempB, readB, R0_out, R1_out, R2_out, R3_out, R4_out, R5_out, R6_out, R7_out, R8_out, R9_out, R10_out, R11_out, R12_out, R13_out, R14_out, R15_out);
 
-
-
-mux_16to1 muxA (temp, readA, register_out0, register_out1, register_out2, register_out3, register_out4, register_out5, register_out6, register_out7,
-	register_out8, register_out9, register_out10, register_out11, register_out12, register_out13, register_out14, register_out15);
-
-mux_16to1 muxB (temp1, readB, register_out0, register_out1, register_out2, register_out3, register_out4, register_out5, register_out6, register_out7,
-	register_out8, register_out9, register_out10, register_out11, register_out12, register_out13, register_out14, register_out15);
 
 endmodule
 
@@ -1458,8 +1455,9 @@ endmodule
 //--------------------------------------------------------------------
 //					Register of 32 bits
 //--------------------------------------------------------------------
-module register_32_bits (output reg [31:0] Y, input [31:0] I,
-	input LE, CLR, CLK);
+
+module register_32bits (output reg [31:0] Y, input [31:0] I,
+			 input LE, CLR, CLK);
 
 always @ (posedge CLK, negedge CLR)
 
