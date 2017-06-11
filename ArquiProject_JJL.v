@@ -1157,27 +1157,56 @@ module mux_16to1 (output reg [31:0] Y, input [3:0] S, input [31:0] D0, D1, D2, D
 
 always @ (S,D0,D1,D2,D3,D4,D5,D6,D7,D8,D9,D10,D11,D12,D13,D14,D15)
 
-case (S)
-
-4'b0000: Y = D0;
-4'b0001: Y = D1;
-4'b0010: Y = D2;
-4'b0011: Y = D3;
-4'b0100: Y = D4;
-4'b0101: Y = D5;
-4'b0110: Y = D6;
-4'b0111: Y = D7;
-4'b1000: Y = D8;
-4'b1001: Y = D9;
-4'b1010: Y = D10;
-4'b1011: Y = D11;
-4'b1100: Y = D12;
-4'b1101: Y = D13;
-4'b1110: Y = D14;
-4'b1111: Y = D15;
-
-endcase
-
+begin
+if(S==4'b0000) begin
+	Y = D0;
+end
+if(S==4'b0001) begin
+	Y = D1;
+end
+if(S==4'b0010) begin
+	Y = D2;
+end
+if(S==4'b0011) begin
+	Y = D3;
+end
+if(S==4'b0100) begin
+	Y = D4;
+end
+if(S==4'b0101) begin
+	Y = D5;
+end
+if(S==4'b0110) begin
+	Y = D6;
+end
+if(S==4'b0111) begin
+	Y = D7;
+end
+if(S==4'b1000) begin
+	Y = D8;
+end
+if(S==4'b1001) begin
+	Y = D9;
+end
+if(S==4'b1010) begin
+	Y = D10;
+end
+if(S==4'b1011) begin
+	Y = D11;
+end
+if(S==4'b1100) begin
+	Y = D12;
+end
+if(S==4'b1101) begin
+	Y = D13;
+end
+if(S==4'b1110) begin
+	Y = D14;
+end
+if(S==4'b1111) begin
+	Y = D15;
+end
+end
 endmodule
 
 
