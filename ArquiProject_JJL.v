@@ -1,141 +1,155 @@
-
-
 //--------------------------------------------------------------------
 //					ALU  	(Not Present)
 //--------------------------------------------------------------------
+module arm_alu (output reg [31:0] result, output reg N_flag, Z_flag, C_flag, V_flag, input [3:0] op_code, input [31:0] dataA, dataB, input carry);
+reg [31:0] temp;
+always @ (*)
+case (op_code)
+		4'b0000: //[AND] Logical AND
+		begin
+		result = dataA & dataB;
+		C_flag = carry;
+		update_N_Z_flags();
+		end
+		4'b0001: //[EOR] Logical Exclusive OR This is a Logical Exclusive OR!!
+		begin
+		result = (dataA & ~dataB) | (~dataA & dataB);
+		C_flag = carry;
+		update_N_Z_flags();
+		end
+		4'b0010: //[SUB] Subtract
+		begin
+		{C_flag, result} = dataA - dataB;
+		if((dataA[31] == 0 && dataB[31] == 1 && result[31] == 1) || (dataA[31] == 1 && dataB[31] == 0 && result[31] == 0))
+		V_flag = 1;
+		else
+		V_flag = 0;
+		update_N_Z_flags();
+		end
+		4'b0011: //[RSB] Reverse Subtract
+		begin
+		{C_flag, result} = dataB - dataA;
+		if((dataB[31] == 0 && dataA[31] == 1 && result[31] == 1) || (dataB[31] == 1 && dataA[31] == 0 && result[31] == 0))
+		V_flag = 1;
+		else
+		V_flag = 0;
+		update_N_Z_flags();
+		end
+		4'b0100: //[ADD] Add
+		begin
+		{C_flag, result} = dataA + dataB;
+		if((dataA[31] == 0 && dataB[31] == 0 && result[31] == 1) || (dataA[31] == 1 && dataB[31] == 1 && result[31] == 0))
+		V_flag = 1;
+		else
+		V_flag = 0;
+		update_N_Z_flags();
+		end
+		4'b0101: //[ADC] Add with Carry
+		begin
+		{C_flag, result} = dataA + dataB + carry;
+		if((dataA[31] == 0 && dataB[31] == 0 && result[31] == 1) || (dataA[31] == 1 && dataB[31] == 1 && result[31] == 0))
+		V_flag = 1;
+		else
+		V_flag = 0;
+		update_N_Z_flags();
+		end
+		4'b0110: //[SBC] Subtract with Carry
+		begin
+		{C_flag, result} = dataA - dataB + carry;
+		if((dataA[31] == 0 && dataB[31] == 1 && result[31] == 1) || (dataA[31] == 1 && dataB[31] == 0 && result[31] == 0))
+		V_flag = 1;
+		else
+		V_flag = 0;
+		update_N_Z_flags();
+		end
+		4'b0111: //[RSC] Reverse Subtract with Carry
+		begin
+		{C_flag, result} = dataB - dataA + carry;
+		if((dataB[31] == 0 && dataA[31] == 1 && result[31] == 1) || (dataB[31] == 1 && dataA[31] == 0 && result[31] == 0))
+		V_flag = 1;
+		else
+		V_flag = 0;
+		update_N_Z_flags();
+		end
+		4'b1000: //[TST] Test
+		begin
+		temp = dataA & dataB;
+		C_flag = carry;
+		N_flag = temp[31];
+		if(temp == 0) 
+		Z_flag = 1;
+		else 
+		Z_flag = 0;
+		end
+		4'b1001: //[TEQ] Test Equivalence
+		begin
+		temp = (dataA & ~dataB) | (~dataA & dataB);
+		C_flag = carry;
+		N_flag = temp[31];
+		if(temp == 0) 
+		Z_flag = 1;
+		else 
+		Z_flag = 0;
+		end
+		4'b1010: //[CMP] Compare
+		begin
+		{C_flag, temp} = dataA - dataB;
+		N_flag = temp[31];
+		if(temp == 0) 
+		Z_flag = 1;
+		else 
+		Z_flag = 0;
+		end
+		4'b1011: //[CMN] Compare Negated
+		begin
+		{C_flag, temp} = dataA + dataB;
+		N_flag = temp[31];
+		if(temp == 0) 
+		Z_flag = 1;
+		else 
+		Z_flag = 0;
+		end
+		4'b1100: //[ORR] Logical OR
+		begin
+		result = dataA | dataB;
+		C_flag = carry;
+		update_N_Z_flags();
+		end
+		4'b1101: //[MOV] Move
+		begin
+		result = dataB;
+		C_flag = carry;
+		update_N_Z_flags();
+		end
+		4'b1110: //[BIC] Bit Clear
+		begin
+		result = dataA & ~dataB;
+		C_flag = carry;
+		update_N_Z_flags();
+		end
+		4'b1111: //[MVN] Move Not
+		begin	
+		result = ~dataB;
+		C_flag = carry;
+		update_N_Z_flags();
+		end
+		/*5'b10000: //Add 4 PC
+			begin
+				result = dataB + 4;
+				end*/
+				endcase
 
-module ALU(output reg [31:0] res, output reg Z_flag, N_flag, C_flag, V_flag, 
-    input [31:0] A, B, input [3:0] op, input Cin);
-  always @ (A, B, op, Cin)
-    begin
-         case(op)
-         4'b0000: //AND
-         	begin
-                res = A & B;
-                C_flag = Cin;
-            end
-         4'b0001: //EOR
-         	begin
-                res = A ^ B;
-                C_flag = Cin;
-            end
-         4'b0010: // SUB
-         	begin
-                {C_flag, res} = A - B;
-                C_flag = ~C_flag;
-                if((A[31] == 0 && B[31] == 1 && res[31] == 1) || 
-                   (A[31] == 1 && B[31] == 0 && res[31] == 0)) //Options for overflow = 1
-                   V_flag = 1;
-                else 
-                   V_flag = 0;
-            end
-         4'b0011: // RSB
-         	begin
-                {C_flag, res} = B - A;
-                C_flag = ~C_flag;
-                 if((A[31] == 0 && B[31] == 1 && res[31] == 1) || 
-                   (A[31] == 1 && B[31] == 0 && res[31] == 0)) //Options for overflow = 1
-                   V_flag = 1;
-                else 
-                   V_flag = 0;
-             end
-         4'b0100: // ADD
-         	begin
-                {C_flag, res} = A + B;
-                if((A[31]==0 && B[31]==0 && res[31]==1) ||
-                   (A[31]==1 && B[31]==1 && res[31]==0)) //Options for overflow = 1
-                   V_flag = 1;
-                else 
-                   V_flag = 0;
-            end
-         4'b0101: //ADC
-         	begin
-                {C_flag, res} = A + B + Cin;
-                if((A[31]==0 && B[31]==0 && res[31]==1) ||
-                   (A[31]==1 && B[31]==1 && res[31]==0)) //Options for overflow = 1
-                   V_flag = 1;
-                else 
-                   V_flag = 0;
-            end
-         4'b0110: // SBC
-            begin
-                C_flag = ~C_flag;
-                {C_flag, res} = A - B;
-                C_flag = ~C_flag;
-                if((A[31] == 0 && B[31] == 1 && res[31] == 1) || 
-                   (A[31] == 1 && B[31] == 0 && res[31] == 0)) //Options for overflow = 1
-                   V_flag = 1;
-                else 
-                   V_flag = 0;
-             end
-         4'b0111: // RSC
-         	begin
-                C_flag = ~C_flag;
-                {C_flag, res} = B - A;
-                C_flag = ~C_flag;
-                if((A[31] == 0 && B[31] == 1 && res[31] == 1) || 
-                   (A[31] == 1 && B[31] == 0 && res[31] == 0)) //Options for overflow = 1
-                   V_flag = 1;
-                else 
-                   V_flag = 0;
-            end
-         4'b1000: // TST
-         	begin
-                res = A & B;
-                C_flag = Cin;
-            end
-         4'b1001: // TEQ
-         	begin
-                res = A ^ B;
-                C_flag = Cin; 
-            end
-         4'b1010: // CMP
-         	begin
-                {C_flag, res} = A - B;
-                C_flag = ~C_flag;
-                if((A[31] == 0 && B[31] == 1 && res[31] == 1) || 
-                   (A[31] == 1 && B[31] == 0 && res[31] == 0)) //Options for overflow = 1
-                   V_flag = 1;
-                else 
-                   V_flag = 0;
-            end
-         4'b1011: //CMN
-         	begin
-                {C_flag, res} = A + B;
-                if((A[31]==0 && B[31]==0 && res[31]==1) ||
-                   (A[31]==1 && B[31]==1 && res[31]==0)) //Options for overflow = 1
-                   V_flag = 1;
-                else 
-                   V_flag = 0;
-            end
-         4'b1100: //ORR
-         	begin
-                res = A | B;
-                C_flag = Cin;
-            end
-         4'b1101: // MOV
-         	begin
-                res = B;
-                C_flag = Cin;
-            end
-         4'b1110: //BIC
-         	begin
-                res = A & ~B;
-                C_flag = Cin;
-            end
-         4'b1111: // MVN
-         	begin
-                res = ~B;
-                C_flag = Cin;
-            end
-         endcase
-         N_flag = res[31];
-         if(res == 0)
-            Z_flag = 1;
-         else
-            Z_flag = 0;
-    end
-endmodule
+	task update_N_Z_flags; //Update the N & Z flags
+	begin
+	N_flag = result[31];
+	if(result == 0) 
+	Z_flag = 1;
+	else 
+	Z_flag = 0;
+	end
+	endtask
+
+	endmodule
 
 
 //--------------------------------------------------------------------
@@ -183,7 +197,7 @@ reg [5:0] nxSt;
 
 //Components Created
 
-PipelineRegister pipe_reg (tempPipe, rom_out, clk);
+control_register pipe_reg (tempPipe, rom_out, clk);
 
 input_manager input_man (im_out, flags, cu_in [31:28]);
 
@@ -195,7 +209,7 @@ mux_2to1_6bits MuxK (Mk_out, reset, ZERO, Mj_out);
 
 encoder enc (enc_out, tempIR, clk);
 
-Microstore_ROM rom (rom_out, Mk_out);
+microstore rom (rom_out, Mk_out);
 
 incrementer inc (inc_out, Mk_out);
 
@@ -209,7 +223,8 @@ Inverter inverter (inv_out, Mh_out, tempPipe[54]);
 
 always @ (*)
 begin	
-cu_out <= tempPipe[53:9];
+//cu_out <= {tempPipe[53:9]};
+cu_out <= {tempPipe[46:19], tempPipe[54:50], tempPipe[18:9], tempPipe[49:48]};
 tempIR <= cu_in;	
 end
 
@@ -274,7 +289,7 @@ mux_2to1_4bits MuxO (opcode_in, Mo, cu_opcode, wireIR[24:21]);
 
 mux_2to1_1bit MuxS (StatusRegEn, Ms, StatusRegEn_cu, ~wireIR[20]);
 
-ALU alu (ALU_Out, Flags [0], Flags [1], Flags[2], Flags [3], opcode_in, RFOut_A, Shf_Out, carry);
+arm_alu alu (ALU_Out, Flags [0], Flags [1], Flags[2], Flags [3], opcode_in, RFOut_A, Shf_Out, carry);
 
 branch_extender branchExt (BranchExt_Out, wireIR[23:0]);
 
@@ -284,13 +299,13 @@ Sign_Extension2 signExt2 (SignExt_Out2, Mc_Out, dataType, SignExtEn2);
 
 Shifter shift (Shf_Out, Flags [2], Ma_Out, wireIR[6:5], Md_Out, SHFen);
 
-register_32bits InsReg (wireIR, MemOut, IREn, clr, clk);
+register_32_bits InsReg (wireIR, MemOut, IREn, clr, clk);
 
-register_32bits StaReg (tempStaReg, Flags, StatusRegEn, clr, clk);
+register_32_bits StaReg (tempStaReg, Flags, StatusRegEn, clr, clk);
 
-register_32bits Mar (MAR_Out, ALU_Out, MAREn, clr, clk);
+register_32_bits Mar (MAR_Out, ALU_Out, MAREn, clr, clk);
 
-register_32bits Mdr (MDR_Out, SignExt_Out2, MDREn, clr, clk);
+register_32_bits Mdr (MDR_Out, SignExt_Out2, MDREn, clr, clk);
 
 Ram ram (MDR_Out, MemEN, r_w, mfa, dataType, dwp, MAR_Out [7:0], tempMfc, MemOut);
 
@@ -313,7 +328,6 @@ end
 else if(in == 4'b0010) begin
 	out = 16'b0000000000000100;
 end 
-
 
 else if(in == 4'b0011) begin
 	out = 16'b0000000000001000;;
@@ -351,7 +365,6 @@ else if(in == 4'b1011) begin
 	out = 16'b0000100000000000;
 end 
 
-
 else if(in == 4'b1100) begin
 	out = 16'b0001000000000000;
 end 
@@ -382,16 +395,10 @@ end
 endmodule
 
 
-
 //--------------------------------------------------------------------
 //					Encoder
 //--------------------------------------------------------------------
 module encoder (output reg [5:0] enc_out, input [31:0] enc_in, input clk);
-
-						if(tempEnc_in[21]==1'b0)
-								
-								begin 
-
 
 reg [31:0] tempEnc_in;
 
@@ -409,12 +416,10 @@ begin
 		enc_out = 6'b000101; 
 	end
 
-
 	//7 = Shift by Immediate Shifter Operand
 	else if (tempEnc_in[27:25] == 3'b000 && tempEnc_in[4] == 1'b0 && tempEnc_in[11:7] != 5'b00000) begin 
 		enc_out = 6'b000111; 
 	end
-
 
 	//41 = Immediate Post-Indexed Load MISCELLANEOUS
 	if (tempEnc_in[27:25] == 3'b000 && tempEnc_in[4] == 1'b1 && tempEnc_in[24] == 1'b0 && tempEnc_in[20] == 1'b1) begin
@@ -442,7 +447,6 @@ begin
 		enc_out = 6'b101000; 
 	end
 
-
 	//36 = Immediate Pre-Indexed Store MISCELLANEOUS
 	if (tempEnc_in[27:25] == 3'b000 && tempEnc_in[4] == 1'b1 && tempEnc_in[24] != 1'b0 && tempEnc_in[21] == 1'b1 && tempEnc_in[20] != 1'b1 ) begin
 		enc_out = 6'b100100; 
@@ -458,18 +462,15 @@ begin
 		enc_out = 6'b011000; 
 	end
 
-
 	//16 = Immediate Post-Indexed Store
 	if (tempEnc_in[27:25] == 3'b010 && tempEnc_in[24] == 1'b0 && tempEnc_in[20] != 1'b1 ) begin
 		enc_out = 6'b010000; 
 	end
 
-
 	//20 = Immediate Offset Load
 	if (tempEnc_in[27:25] == 3'b010 && tempEnc_in[24] != 1'b0 && tempEnc_in[21] == 1'b0  && tempEnc_in[20] == 1'b1) begin
 		enc_out = 6'b010100; 
 	end
-
 
 	//20 = Immediate Offset Load
 	if (tempEnc_in[27:25] == 3'b010 && tempEnc_in[24] != 1'b0 && tempEnc_in[21] == 1'b0  && tempEnc_in[20] != 1'b1) begin
@@ -521,14 +522,12 @@ begin
 		enc_out = 6'b101011; 
 	end
 
-
 	//44 = Branch with Link
 	if (tempEnc_in[27:25] == 3'b101 && tempEnc_in[24] != 1'b0) begin
 		enc_out	= 6'b101100; 
 	end
 
 	if (tempEnc_in == 31'h00000000) begin
-
 		enc_out=6'b000000;
 	end
 
@@ -639,111 +638,90 @@ Flags[3] = Overflow Flag
 always @ (*)
 begin
 
-case (cond_Code)
-	//EQ
-	4'b0000: 
-	begin
+//EQ - Equal - Flags tested: Z=1
+if (cond_Code == 4'b0000) begin
 	out = Flags[1];
-	end 
-	
-	//NE
-	4'b0001:
-	begin
+end
+
+//NE - Not equal - Flags tested: Z=1
+else if (cond_Code == 4'b0001) begin
 	out = ~Flags[1];
-	end 
-	
-	//CS/HS
-	4'b0010:
-	begin
-	out = Flags[2];
-	end 
-	
-	//CC/LO
-	4'b0011: 
-	begin
+end
+
+//CS/HS - Unsigned higher or same - Flags tested: C=1
+else if (cond_Code == 4'b0010) begin
 	out = ~Flags[2];
-	end 
-	
-	//MI
-	4'b0100:
-	begin
+end
+
+//CC/LO - Unsigned lower - Flags tested: C=0
+else if (cond_Code == 4'b0011) begin
+	out = ~Flags[2];
+end
+
+//MI - Minus = Flags tested: N=1
+else if (cond_Code == 4'b0100) begin
 	out = Flags[0];
-	end 
-	
-	//PL
-	4'b0101:
-	begin
+end
+
+//PL - Positive or Zero - Flags tested: N=0
+else if (cond_Code == 4'b0101) begin
 	out = ~Flags[0];
-	end 
-	
-	//VS
-	4'b0110:
-	begin
+end
+
+//VS - Overflow - Flags tested: V=1
+else if (cond_Code == 4'b0110) begin
 	out = Flags[3];
-	end 
-	
-	//VC
-	4'b0111:
-	begin
+end
+
+//VC - No overflow - Flags tested: V=0
+else if (cond_Code == 4'b0111) begin
 	out = ~Flags[3];
-	end 
-	
-	//HI
-	4'b1000:
-	begin
+end
+
+//HI - Unsigned higher - C=1 & Z=0
+else if (cond_Code == 4'b1000) begin
 	out = Flags[2] & ~Flags[1];
-	end 
-	
-	//LS
-	4'b1001:
-	begin
+end
+
+//LS - Unsigned lower or same - Flags tested: C=0 or Z=1
+else if (cond_Code == 4'b1001) begin
 	out = ~Flags[2] | Flags[1];
-	end 
-	
-	//GE
-	4'b1010:
-	begin
+end
+
+//GE - Greater or equal - N=V
+else if (cond_Code == 4'b1010) begin
 	out = ~(Flags[0] ^ Flags[3]);
-	end 
-	
-	//LT
-	4'b1011:
-	begin
+end
+
+//LT - Less than - Flags tested: N!=V
+else if (cond_Code == 4'b1011) begin
 	out = Flags[0] ^ Flags[3];
-	end 
-	
-	//GT
-	4'b1100:
-	begin
+end
+
+//GT - Greater than - Flags tested: Z=0 & N=V
+else if (cond_Code == 4'b1100) begin
 	out = ~(Flags[0] ^ Flags[3]) & (~Flags[1]);
-	end 
-	
-	//LE
-	4'b1101:
-	begin
+end
+
+//LE - Less than or equal - Flags tested: Z=1 or N=!V
+else if (cond_Code == 4'b1101) begin
 	out = (Flags[0] ^ Flags[3]) | (Flags[1]);
-	end 
-	
-	//AL
-	4'b1110:
-	begin
+end
+
+//AL - Always
+else if (cond_Code == 4'b1110) begin
 	out = 1'b1;
-	end 
-	
-	//**NOT USED**
-	4'b1111:
-	begin
-	end 
-	
-	endcase
-	end 
+end
 
-	endmodule
+
+end 
+
+endmodule
 
 
 
-	/********************************************************************************/
-	/*					                 Inverter                                   */
+/********************************************************************************/
+/*					                 Inverter                                   */
 //Input
 //in: lo que sale del MUX 2x1
 //invtr: inv
@@ -859,7 +837,7 @@ temp_data_in[15:8] <= dat[i[7:0]+2];
 //					MICROSTORE (ROM)
 //--------------------------------------------------------------------
 
-module Microstore_ROM (output reg[54:0] out, input [5:0] index);
+module microstore (output reg[54:0] out, input [5:0] index);
 
 initial begin
 	//index =  6'b000001;
@@ -868,51 +846,46 @@ initial begin
 	always @(index)
 	begin
 	case(index)
-	6'b000000:  out = 55'b0100000000000001101001101010000010011000111100000001010;
-	6'b000001:  out = 55'b0110000111111111101001101010010000011000101100000010011;
-	6'b000010:  out = 55'b0011111111111110100111101010000000001000111100000010011;
-	6'b000011:  out = 55'b1111111111111111101111101010000000001001010100000011101;
-	6'b000100:  out = 55'b0111111111111111101111101010000000001000111100000001000;
-	6'b000101:  out = 55'b0010000000000000000001011010010111011000111100000001001;
-	6'b000110:  out = 55'b0010000000000000000101011110010111011000111100000001001;
-	6'b000111:  out = 55'b0010000000000000000101011100110111011000111100000001001;
-	6'b001000:  out = 55'b1110000000000001101011101010010110000001110101001000101;
-	6'b001001:  out = 55'b0010000000000001101011101000010110011000111101000001001;
-	6'b001010:  out = 55'b0110000000000001101001101000011010011000110101001011011;
-	6'b001011:  out = 55'b1110000000000001101001101000011010100011111101001011111;
-	6'b001100:  out = 55'b0110000000000000100101100100010110011000101101001010010;
-	6'b001101:  out = 55'b0110000000000000100001101000010110011000101101001010010;
-	6'b001110:  out = 55'b0010000000000000100101101000010110011000101101001010010;
-	6'b001111:  out = 55'b0010000000000000100001101000010110011000101101001010010;
-	6'b010000:  out = 55'b0110000000000001101001101000010110011000101101010001011;
-	6'b010001:  out = 55'b0010000000000000100101101000010110011000111101001010010;
-	6'b010010:  out = 55'b0110000000000001101001101000010110011000101101010011011;
-	6'b010011:  out = 55'b0010000000000000100001101000010110011000111101001010010;
-	6'b010100:  out = 55'b0110000000000000100101100100010110011000101101001000010;
-	6'b010101:  out = 55'b0110000000000000100001101000010110011000101101001000010;
-	6'b010110:  out = 55'b0010000000000000100101101000010110011000101101001000010;
-	6'b010111:  out = 55'b0010000000000000100001101000010110011000101101001000010;
-	6'b011000:  out = 55'b0110000000000001101001101000010110011000101101011001011;
-	6'b011001:  out = 55'b0010000000000000100101101000010110011000111101001000010;
-	6'b011010:  out = 55'b0110000000000001101001101000010110011000101101011011011;
-	6'b011011:  out = 55'b0010000000000000100001101000010110011000111101001000010;
-	6'b011100:  out = 55'b1110000000000001101001101010010110000001110011011100101;
-	6'b011101:  out = 55'b0010000000000001101011101000010110011000111111000001001;
-	6'b011110:  out = 55'b0110000000000001101001101000011010011000110011011111011;
-	6'b011111:  out = 55'b1110000000000001101001101000011010100000111111011111111;
-	6'b100000:  out = 55'b0011111111111110100101101000000000011000111110000001001;
-	6'b100001:  out = 55'b0011110111111111101001101000000000011000111110100010011;
-	6'b100010:  out = 55'b0011111111111110100101101100000000011000111110000001001;
-	6'b100011:  out = 55'b0110000000000000100101100000010110011000101111011110010;
-	6'b100100:  out = 55'b0010000000000000100101101000010110011000101111011110010;
-	6'b100101:  out = 55'b0110000000000001101001101000010110011000101111100110011;
-	6'b100110:  out = 55'b0010000000000000100101101000010110011000111111011110010;
-	6'b100111:  out = 55'b0110000000000000100101100000010110011000101111011100010;
-	6'b101000:  out = 55'b0010000000000000100101101000010110011000101111011100010;
-	6'b101001:  out = 55'b0110000000000001101001101000010110011000101111101001011;
-	6'b101010:  out = 55'b0010000000000000100101101000010110011000111111011100010;
-	6'b101011:  out = 55'b0110000000000001101001101000010110011000111111100000111;
-	6'b101100:  out = 55'b0110000000000001101001101000010110011000111111100001111;
+		6'b000000:  out = 55'b0001000010000000000000110100110101000110001111000001010;
+		6'b000001:  out = 55'b1001000011000011111111110100110101000110001011000010011;
+		6'b000010:  out = 55'b0000000001111111111111010011110101000010001111000010011;
+		6'b000011:  out = 55'b0000000111111111111111110111110101000010010101000011101;
+		6'b000100:  out = 55'b0000000011111111111111110111110101000010001111000001000;
+		6'b000101:  out = 55'b1011100001000000000000000000101101000110001111000001001;
+		6'b000110:  out = 55'b1011100001000000000000000010101101000110001111000001001;
+		6'b000111:  out = 55'b1011100001000000000000000010101100010110001111000001001;
+		6'b001000:  out = 55'b1011001111000000000000110101110101000000011101001000101;
+		6'b001001:  out = 55'b1011001001000000000000110101110100000110001111000001001;
+		6'b001010:  out = 55'b1101001011000000000000110100110100000110001101001011011;
+		6'b001011:  out = 55'b1101001111000000000000110100110100001000001111001011111;
+		6'b001100:  out = 55'b1011001011000000000000010010110010000110001011001010010;
+		6'b001101:  out = 55'b1011001011000000000000010000110100000110001011001010010;
+		6'b001110:  out = 55'b1011001001000000000000010010110100000110001011001010010;
+		6'b001111:  out = 55'b1011001001000000000000010000110100000110001011001010010;
+		6'b010000:  out = 55'b1011001011000000000000110100110100000110001011010001011;
+		6'b010001:  out = 55'b1011001001000000000000010010110100000110001111001010010;
+		6'b010010:  out = 55'b1011001011000000000000110100110100000110001011010011011;
+		6'b010011:  out = 55'b1011001001000000000000010000110100000110001111001010010;
+		6'b010100:  out = 55'b1011001011000000000000010010110010000110001011001000010;
+		6'b010101:  out = 55'b1011001011000000000000010000110100000110001011001000010;
+		6'b010110:  out = 55'b1011001001000000000000010010110100000110001011001000010;
+		6'b010111:  out = 55'b1011001001000000000000010000110100000110001011001000010;
+		6'b011000:  out = 55'b1011001011000000000000110100110100000110001011011001011;
+		6'b011001:  out = 55'b1011001001000000000000010010110100000110001111001000010;
+		6'b011010:  out = 55'b1011001011000000000000110100110100000110001011011011011;
+		6'b011011:  out = 55'b1011001001000000000000010000110100000110001111001000010;
+		6'b011100:  out = 55'b1011011111000000000000110100110101000000011100011100101;
+		6'b011101:  out = 55'b1011011001000000000000110101110100000110001111000001001;
+		6'b011110:  out = 55'b1101001011000000000000110100110100000110001100011111011;
+		6'b011111:  out = 55'b1101001111000000000000110100110100001000001111011111111;
+		6'b100000:  out = 55'b1011011011000000000000010010110000000110001011011110010;
+		6'b100001:  out = 55'b1011011001000000000000010010110100000110001011011110010;
+		6'b100010:  out = 55'b1011001011000000000000110100110100000110001011100011011;
+		6'b100011:  out = 55'b1011001001000000000000010010110100000110001111011110010;
+		6'b100100:  out = 55'b1011011011000000000000010010110000000110001011011100010;
+		6'b100101:  out = 55'b1011011001000000000000010010110100000110001011011100010;
+		6'b100110:  out = 55'b1011011011000000000000110100110100000110001011100111011;
+		6'b100111:  out = 55'b1011011001000000000000010010110100000110001111011100010;
 	endcase
 	end
 
@@ -1245,7 +1218,7 @@ case (pipeline)
 //				PIPELINE REGISTER
 //--------------------------------------------------------
 
-module PipelineRegister (output reg [54:0] out, input [54:0] pipeline_in, input clk);
+module control_register (output reg [54:0] out, input [54:0] pipeline_in, input clk);
 
 always @(posedge clk)	
 out <= pipeline_in;	
@@ -1385,17 +1358,17 @@ endmodule
 
 
 //--------------------------------------------------------
-//				Register File v2
+//				Register FIle
 //--------------------------------------------------------
-module register_file (output reg [31:0] PA, PB, input [31:0] PC, input [3:0] readA, readB, writeA, input enable, clr, clk);
+module register_file (output reg [31:0] outA, outB, input [31:0] dataIn, input [3:0] readA, readB, writeA, input enable, clr, clk);
 
 reg decoder_enable;
 
-
-wire [31:0] tempA;
-wire [31:0] tempB;
-wire [15:0] dec_out;
-wire [31:0] R0_out,R1_out,R2_out,R3_out,R4_out,R5_out,R6_out,R7_out,R8_out,R9_out,R10_out,R11_out,R12_out,R13_out,R14_out,R15_out;
+wire [31:0] temp;
+wire [31:0] temp1;
+wire [15:0] decoder_out;
+wire [31:0] register_out0, register_out1, register_out2, register_out3, register_out4, register_out5, register_out6, register_out7,
+register_out8, register_out9, register_out10, register_out11, register_out12, register_out13, register_out14, register_out15;
 
 always @ (enable)
 begin 
@@ -1420,36 +1393,39 @@ end
 
 always @ (*)
 begin
-
-	PA = tempA;
-	PB = tempB;
-
+outA = temp;
+outB = temp1;
 end
 
 
+decoder dec (decoder_out, writeA, decoder_enable);
 
-decoder dec (dec_out, writeA, decoder_enable);
+register_32_bits register0 (register_out0, dataIn, ~decoder_out[0], clr, clk);
+register_32_bits register1 (register_out1, dataIn, ~decoder_out[1], clr, clk);
+register_32_bits register2 (register_out2, dataIn, ~decoder_out[2], clr, clk);
+register_32_bits register3 (register_out3, dataIn, ~decoder_out[3], clr, clk);
+register_32_bits register4 (register_out4, dataIn, ~decoder_out[4], clr, clk);
+register_32_bits register5 (register_out5, dataIn, ~decoder_out[5], clr, clk);
+register_32_bits register6 (register_out6, dataIn, ~decoder_out[6], clr, clk);
+register_32_bits register7 (register_out7, dataIn, ~decoder_out[7], clr, clk);
+register_32_bits register8 (register_out8, dataIn, ~decoder_out[8], clr, clk);
+register_32_bits register9 (register_out9, dataIn, ~decoder_out[9], clr, clk);
+register_32_bits register10 (register_out10, dataIn, ~decoder_out[10], clr, clk);
+register_32_bits register11 (register_out11, dataIn, ~decoder_out[11], clr, clk);
+register_32_bits register12 (register_out12, dataIn, ~decoder_out[12], clr, clk);
+register_32_bits register13 (register_out13, dataIn, ~decoder_out[13], clr, clk);
+register_32_bits register14 (register_out14, dataIn, ~decoder_out[14], clr, clk);
+register_32_bits register15 (register_out15, dataIn, ~decoder_out[15], clr, clk);
 
-register_32bits register0  (R0_out, PC, ~dec_out[0], clr, clk);
-register_32bits register1  (R1_out, PC, ~dec_out[1], clr, clk);
-register_32bits register2  (R2_out, PC, ~dec_out[2], clr, clk);
-register_32bits register3  (R3_out, PC, ~dec_out[3], clr, clk);
-register_32bits register4  (R4_out, PC, ~dec_out[4], clr, clk);
-register_32bits register5  (R5_out, PC, ~dec_out[5], clr, clk);
-register_32bits register6  (R6_out, PC, ~dec_out[6], clr, clk);
-register_32bits register7  (R7_out, PC, ~dec_out[7], clr, clk);
-register_32bits register8  (R8_out, PC, ~dec_out[8], clr, clk);
-register_32bits register9  (R9_out, PC, ~dec_out[9], clr, clk);
-register_32bits register10 (R10_out, PC, ~dec_out[10], clr, clk);
-register_32bits register11 (R11_out, PC, ~dec_out[11], clr, clk);
-register_32bits register12 (R12_out, PC, ~dec_out[12], clr, clk);
-register_32bits register13 (R13_out, PC, ~dec_out[13], clr, clk);
-register_32bits register14 (R14_out, PC, ~dec_out[14], clr, clk);
-register_32bits register15 (R15_out, PC, ~dec_out[15], clr, clk);
 
-mux_16to1 muxA (tempA, readA, R0_out, R1_out, R2_out, R3_out, R4_out, R5_out, R6_out, R7_out, R8_out, R9_out, R10_out, R11_out, R12_out, R13_out, R14_out, R15_out);
-mux_16to1 muxB (tempB, readB, R0_out, R1_out, R2_out, R3_out, R4_out, R5_out, R6_out, R7_out, R8_out, R9_out, R10_out, R11_out, R12_out, R13_out, R14_out, R15_out);
 
+
+
+mux_16to1 muxA (temp, readA, register_out0, register_out1, register_out2, register_out3, register_out4, register_out5, register_out6, register_out7,
+	register_out8, register_out9, register_out10, register_out11, register_out12, register_out13, register_out14, register_out15);
+
+mux_16to1 muxB (temp1, readB, register_out0, register_out1, register_out2, register_out3, register_out4, register_out5, register_out6, register_out7,
+	register_out8, register_out9, register_out10, register_out11, register_out12, register_out13, register_out14, register_out15);
 
 endmodule
 
@@ -1457,9 +1433,8 @@ endmodule
 //--------------------------------------------------------------------
 //					Register of 32 bits
 //--------------------------------------------------------------------
-
-module register_32bits (output reg [31:0] Y, input [31:0] I,
-			 input LE, CLR, CLK);
+module register_32_bits (output reg [31:0] Y, input [31:0] I,
+	input LE, CLR, CLK);
 
 always @ (posedge CLK, negedge CLR)
 
