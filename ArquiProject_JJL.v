@@ -233,20 +233,20 @@ endmodule
 //--------------------------------------------------------------------
 //					DATA PATH
 //--------------------------------------------------------------------
-module DataPath(output reg mfc, output reg [31:0] IR_Out, StaReg_Out, input [3:0] cu_opcode, write_cu, readA_cu, readB_cu, input [1:0] Ma, dataType, imme_SEL, Mg,
-	input RFen, Mb, Mc, Md, Me, Mf, Mo, Ms, Ml, MAREn, MDREn, IREn, SHFen, SignExtEn, SignExtEn2, r_w, MemEN, dwp, mfa, clk, clr, StatusRegEn_cu);
+module DataPath(output reg mfc, output reg [31:0] IR_Out, StaReg_Out, input [3:0] OpC_cu, SC_cu, SA_cu, SB_cu, input [1:0] MA, dataType, imme_SEL, MG,
+	input RF_en, MB, MC, MD, ME, MF, MO, MS, ML, MAR_en, MDR_en, IR_en, SHIFT_en, SignExtEn, SE2_en, R_W, RAM_en, dwp, MFA, clk, clr, StatusRegEn_cu);
 
 //Wires connected to other components
 
-wire [31:0] RFOut_A, RFOut_B, BranchExt_Out, SignExt_Out, Ma_Out, Mb_Out, Mc_Out, Md_Out, Me_Out, 
-SignExt_Out2, ALU_Out, Shf_Out, MDR_Out, MAR_Out, MemOut, Flags;
+wire [31:0] RFOut_A, RFOut_B, BranchExt_Out, SignExt_Out, MA_out, MB_out, MC_out, MD_out, ME_out, 
+SE2_out, ALU_out, SHIFT_out, MDR_Out, MAR_Out, RAM_out, Flags;
 
-wire [3:0] write, readA, readB, opcode_in, Ml_out;
+wire [3:0] SC, SA, SB, OpC_in, Ml_out;
 reg carry;
 wire StatusRegEn;
 
-//assign write = wireIR[15:12];
-assign write = Ml_out;
+//assign SC = wireIR[15:12];
+assign SC = Ml_out;
 
 //Temp variables
 
@@ -267,49 +267,50 @@ end
 
 //Components created
 
-register_file regf(RFOut_A, RFOut_B, ALU_Out, readA, readB, write, RFen, clr, clk);
+register_file regf(RFOut_A, RFOut_B, ALU_out, SA, SB, SC, RF_en, clr, clk);
 
-mux_4to1 MuxA (Ma_Out, Ma, RFOut_B, MDR_Out, Mb_Out, temp4);
+mux_4to1 mux_A (MA_out, MA, RFOut_B, MDR_Out, MB_out, temp4);
 
-mux_2to1 MuxB (Mb_Out, Mb, BranchExt_Out, SignExt_Out);
+mux_2to1 mux_B (MB_out, MB, BranchExt_Out, SignExt_Out);
 
-mux_2to1 MuxC (Mc_Out, Mc, ALU_Out, MemOut);
+mux_2to1 mux_C (MC_out, MC, ALU_out, RAM_out);
 
-mux_2to1 MuxD (Md_Out, Md, Me_Out, RFOut_A);
+mux_2to1 mux_D (MD_out, MD, ME_out, RFOut_A);
 
-mux_2to1 MuxE (Me_Out, Me, wireIR, wireIR);
+mux_2to1 mux_E (ME_out, ME, wireIR, wireIR);
 
-mux_2to1_4bits MuxF (readA, Mf, readA_cu, wireIR[19:16]);
+mux_2to1_4bits mux_F (SA, MF, SA_cu, wireIR[19:16]);
 
-mux_4to1_4bits MuxG (readB, Mg, readB_cu, wireIR[3:0], wireIR[15:12], wireIR[19:16]);
+mux_4to1_4bits mux_G (SB, MG, SB_cu, wireIR[3:0], wireIR[15:12], wireIR[19:16]);
 
-mux_2to1_4bits MuxL (Ml_out, Ml, write_cu, wireIR[15:12]);
+mux_2to1_4bits mux_L (Ml_out, ML, SC_cu, wireIR[15:12]);
 
-mux_2to1_4bits MuxO (opcode_in, Mo, cu_opcode, wireIR[24:21]);
+mux_2to1_4bits mux_O (OpC_in, MO, OpC_cu, wireIR[24:21]);
 
-mux_2to1_1bit MuxS (StatusRegEn, Ms, StatusRegEn_cu, ~wireIR[20]);
+mux_2to1_1bit mux_S (StatusRegEn, MS, StatusRegEn_cu, ~wireIR[20]);
 
-arm_alu alu (ALU_Out, Flags [0], Flags [1], Flags[2], Flags [3], opcode_in, RFOut_A, Shf_Out, carry);
+arm_alu alu (ALU_out, Flags [0], Flags [1], Flags[2], Flags [3], OpC_in, RFOut_A, SHIFT_out, carry);
 
 branch_extender branchExt (BranchExt_Out, wireIR[23:0]);
 
 Imme_Sign_Extension signExt (SignExt_Out, wireIR, SignExtEn, imme_SEL);
 
-Sign_Extension2 signExt2 (SignExt_Out2, Mc_Out, dataType, SignExtEn2);
+Sign_Extension2 signExt2 (SE2_out, MC_out, dataType, SE2_en);
 
-Shifter shift (Shf_Out, Flags [2], Ma_Out, wireIR[6:5], Md_Out, SHFen);
+Shifter shift (SHIFT_out, Flags [2], MA_out, wireIR[6:5], MD_out, SHIFT_en);
 
-register_32_bits InsReg (wireIR, MemOut, IREn, clr, clk);
+register_32_bits InsReg (wireIR, RAM_out, IR_en, clr, clk);
 
 register_32_bits StaReg (tempStaReg, Flags, StatusRegEn, clr, clk);
 
-register_32_bits Mar (MAR_Out, ALU_Out, MAREn, clr, clk);
+register_32_bits Mar (MAR_Out, ALU_out, MAR_en, clr, clk);
 
-register_32_bits Mdr (MDR_Out, SignExt_Out2, MDREn, clr, clk);
+register_32_bits Mdr (MDR_Out, SE2_out, MDR_en, clr, clk);
 
-Ram ram (MDR_Out, MemEN, r_w, mfa, dataType, dwp, MAR_Out [7:0], tempMfc, MemOut);
+Ram ram (MDR_Out, RAM_en, R_W, MFA, dataType, dwp, MAR_Out [7:0], tempMfc, RAM_out);
 
 endmodule
+
 
 
 //--------------------------------------------------------------------
@@ -753,10 +754,10 @@ wire [44:0] cu_out;
 reg clk, clr;
 
 //Module Instantiation
-DataPath datapath (.mfc(mfc), .IR_Out(IR_Out), .StaReg_Out(StaReg_Out), .cu_opcode(cu_out[30:27]), .write_cu(cu_out[42:39]), .readA_cu(cu_out[38:35]), .readB_cu(cu_out[34:31]), 
-	.Ma(cu_out[26:25]), .dataType(cu_out[9:8]), .imme_SEL(cu_out[1:0]), .RFen(cu_out[44]), .Mb(cu_out[20]), .Mc(cu_out[19]), .Md(cu_out[18]), .Me(cu_out[17]), .Mf(cu_out[16]), 
-	.Mg(cu_out[15:14]), .Mo(cu_out[12]), .Ms(cu_out[22]), .Ml(cu_out[13]), .MAREn(cu_out[4]), .MDREn(cu_out[3]), .IREn(cu_out[5]), .SHFen(cu_out[24]), .SignExtEn(cu_out[21]), 
-	.SignExtEn2(cu_out[2]), .r_w(cu_out[11]), .MemEN(cu_out[10]), .dwp(cu_out[7]), .mfa(cu_out[6]), .clk(clk), .clr(clr), .StatusRegEn_cu(cu_out[23]));
+DataPath datapath (.mfc(mfc), .IR_Out(IR_Out), .StaReg_Out(StaReg_Out), .OpC_cu(cu_out[30:27]), .SC_cu(cu_out[42:39]), .SA_cu(cu_out[38:35]), .SB_cu(cu_out[34:31]), 
+	.MA(cu_out[26:25]), .dataType(cu_out[9:8]), .imme_SEL(cu_out[1:0]), .RF_en(cu_out[44]), .MB(cu_out[20]), .MC(cu_out[19]), .MD(cu_out[18]), .ME(cu_out[17]), .MF(cu_out[16]), 
+	.MG(cu_out[15:14]), .MO(cu_out[12]), .MS(cu_out[22]), .ML(cu_out[13]), .MAR_en(cu_out[4]), .MDR_en(cu_out[3]), .IR_en(cu_out[5]), .SHIFT_en(cu_out[24]), .SignExtEn(cu_out[21]), 
+	.SE2_en(cu_out[2]), .R_W(cu_out[11]), .RAM_en(cu_out[10]), .dwp(cu_out[7]), .MFA(cu_out[6]), .clk(clk), .clr(clr), .StatusRegEn_cu(cu_out[23]));
 
 control_unit cu (.cu_out(cu_out), .clk(clk), .reset(clr), .mfc(mfc), .cu_in(IR_Out), .flags(StaReg_Out [3:0]));
 
@@ -1015,6 +1016,7 @@ endcase
 
 endmodule
 
+
 /********************************************************************************/
 /*					                   Mux 3                                    */
 //Input
@@ -1221,8 +1223,7 @@ case (pipeline)
 module control_register (output reg [54:0] out, input [54:0] pipeline_in, input clk);
 
 always @(posedge clk)	
-out <= pipeline_in;	
-
+	out <= pipeline_in;	
 endmodule
 
 
