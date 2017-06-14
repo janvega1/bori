@@ -1,139 +1,155 @@
 //--------------------------------------------------------------------
 //					ALU  	(Not Present)
 //--------------------------------------------------------------------
+module arm_alu (output reg [31:0] result, output reg N_flag, Z_flag, C_flag, V_flag, input [3:0] op_code, input [31:0] dataA, dataB, input carry);
+reg [31:0] temp;
+always @ (*)
+case (op_code)
+		4'b0000: //[AND] Logical AND
+		begin
+		result = dataA & dataB;
+		C_flag = carry;
+		update_N_Z_flags();
+		end
+		4'b0001: //[EOR] Logical Exclusive OR This is a Logical Exclusive OR!!
+		begin
+		result = (dataA & ~dataB) | (~dataA & dataB);
+		C_flag = carry;
+		update_N_Z_flags();
+		end
+		4'b0010: //[SUB] Subtract
+		begin
+		{C_flag, result} = dataA - dataB;
+		if((dataA[31] == 0 && dataB[31] == 1 && result[31] == 1) || (dataA[31] == 1 && dataB[31] == 0 && result[31] == 0))
+		V_flag = 1;
+		else
+		V_flag = 0;
+		update_N_Z_flags();
+		end
+		4'b0011: //[RSB] Reverse Subtract
+		begin
+		{C_flag, result} = dataB - dataA;
+		if((dataB[31] == 0 && dataA[31] == 1 && result[31] == 1) || (dataB[31] == 1 && dataA[31] == 0 && result[31] == 0))
+		V_flag = 1;
+		else
+		V_flag = 0;
+		update_N_Z_flags();
+		end
+		4'b0100: //[ADD] Add
+		begin
+		{C_flag, result} = dataA + dataB;
+		if((dataA[31] == 0 && dataB[31] == 0 && result[31] == 1) || (dataA[31] == 1 && dataB[31] == 1 && result[31] == 0))
+		V_flag = 1;
+		else
+		V_flag = 0;
+		update_N_Z_flags();
+		end
+		4'b0101: //[ADC] Add with Carry
+		begin
+		{C_flag, result} = dataA + dataB + carry;
+		if((dataA[31] == 0 && dataB[31] == 0 && result[31] == 1) || (dataA[31] == 1 && dataB[31] == 1 && result[31] == 0))
+		V_flag = 1;
+		else
+		V_flag = 0;
+		update_N_Z_flags();
+		end
+		4'b0110: //[SBC] Subtract with Carry
+		begin
+		{C_flag, result} = dataA - dataB + carry;
+		if((dataA[31] == 0 && dataB[31] == 1 && result[31] == 1) || (dataA[31] == 1 && dataB[31] == 0 && result[31] == 0))
+		V_flag = 1;
+		else
+		V_flag = 0;
+		update_N_Z_flags();
+		end
+		4'b0111: //[RSC] Reverse Subtract with Carry
+		begin
+		{C_flag, result} = dataB - dataA + carry;
+		if((dataB[31] == 0 && dataA[31] == 1 && result[31] == 1) || (dataB[31] == 1 && dataA[31] == 0 && result[31] == 0))
+		V_flag = 1;
+		else
+		V_flag = 0;
+		update_N_Z_flags();
+		end
+		4'b1000: //[TST] Test
+		begin
+		temp = dataA & dataB;
+		C_flag = carry;
+		N_flag = temp[31];
+		if(temp == 0) 
+		Z_flag = 1;
+		else 
+		Z_flag = 0;
+		end
+		4'b1001: //[TEQ] Test Equivalence
+		begin
+		temp = (dataA & ~dataB) | (~dataA & dataB);
+		C_flag = carry;
+		N_flag = temp[31];
+		if(temp == 0) 
+		Z_flag = 1;
+		else 
+		Z_flag = 0;
+		end
+		4'b1010: //[CMP] Compare
+		begin
+		{C_flag, temp} = dataA - dataB;
+		N_flag = temp[31];
+		if(temp == 0) 
+		Z_flag = 1;
+		else 
+		Z_flag = 0;
+		end
+		4'b1011: //[CMN] Compare Negated
+		begin
+		{C_flag, temp} = dataA + dataB;
+		N_flag = temp[31];
+		if(temp == 0) 
+		Z_flag = 1;
+		else 
+		Z_flag = 0;
+		end
+		4'b1100: //[ORR] Logical OR
+		begin
+		result = dataA | dataB;
+		C_flag = carry;
+		update_N_Z_flags();
+		end
+		4'b1101: //[MOV] Move
+		begin
+		result = dataB;
+		C_flag = carry;
+		update_N_Z_flags();
+		end
+		4'b1110: //[BIC] Bit Clear
+		begin
+		result = dataA & ~dataB;
+		C_flag = carry;
+		update_N_Z_flags();
+		end
+		4'b1111: //[MVN] Move Not
+		begin	
+		result = ~dataB;
+		C_flag = carry;
+		update_N_Z_flags();
+		end
+		/*5'b10000: //Add 4 PC
+			begin
+				result = dataB + 4;
+				end*/
+				endcase
 
-module ALU(output reg [31:0] res, output reg Z_flag, N_flag, C_flag, V_flag, 
-    input [31:0] A, B, input [3:0] op, input Cin);
-  always @ (A, B, op, Cin)
-    begin
-         case(op)
-         4'b0000: //AND
-         	begin
-                res = A & B;
-                C_flag = Cin;
-            end
-         4'b0001: //EOR
-         	begin
-                res = A ^ B;
-                C_flag = Cin;
-            end
-         4'b0010: // SUB
-         	begin
-                {C_flag, res} = A - B;
-                C_flag = ~C_flag;
-                if((A[31] == 0 && B[31] == 1 && res[31] == 1) || 
-                   (A[31] == 1 && B[31] == 0 && res[31] == 0)) //Options for overflow = 1
-                   V_flag = 1;
-                else 
-                   V_flag = 0;
-            end
-         4'b0011: // RSB
-         	begin
-                {C_flag, res} = B - A;
-                C_flag = ~C_flag;
-                 if((A[31] == 0 && B[31] == 1 && res[31] == 1) || 
-                   (A[31] == 1 && B[31] == 0 && res[31] == 0)) //Options for overflow = 1
-                   V_flag = 1;
-                else 
-                   V_flag = 0;
-             end
-         4'b0100: // ADD
-         	begin
-                {C_flag, res} = A + B;
-                if((A[31]==0 && B[31]==0 && res[31]==1) ||
-                   (A[31]==1 && B[31]==1 && res[31]==0)) //Options for overflow = 1
-                   V_flag = 1;
-                else 
-                   V_flag = 0;
-            end
-         4'b0101: //ADC
-         	begin
-                {C_flag, res} = A + B + Cin;
-                if((A[31]==0 && B[31]==0 && res[31]==1) ||
-                   (A[31]==1 && B[31]==1 && res[31]==0)) //Options for overflow = 1
-                   V_flag = 1;
-                else 
-                   V_flag = 0;
-            end
-         4'b0110: // SBC
-            begin
-                C_flag = ~C_flag;
-                {C_flag, res} = A - B;
-                C_flag = ~C_flag;
-                if((A[31] == 0 && B[31] == 1 && res[31] == 1) || 
-                   (A[31] == 1 && B[31] == 0 && res[31] == 0)) //Options for overflow = 1
-                   V_flag = 1;
-                else 
-                   V_flag = 0;
-             end
-         4'b0111: // RSC
-         	begin
-                C_flag = ~C_flag;
-                {C_flag, res} = B - A;
-                C_flag = ~C_flag;
-                if((A[31] == 0 && B[31] == 1 && res[31] == 1) || 
-                   (A[31] == 1 && B[31] == 0 && res[31] == 0)) //Options for overflow = 1
-                   V_flag = 1;
-                else 
-                   V_flag = 0;
-            end
-         4'b1000: // TST
-         	begin
-                res = A & B;
-                C_flag = Cin;
-            end
-         4'b1001: // TEQ
-         	begin
-                res = A ^ B;
-                C_flag = Cin; 
-            end
-         4'b1010: // CMP
-         	begin
-                {C_flag, res} = A - B;
-                C_flag = ~C_flag;
-                if((A[31] == 0 && B[31] == 1 && res[31] == 1) || 
-                   (A[31] == 1 && B[31] == 0 && res[31] == 0)) //Options for overflow = 1
-                   V_flag = 1;
-                else 
-                   V_flag = 0;
-            end
-         4'b1011: //CMN
-         	begin
-                {C_flag, res} = A + B;
-                if((A[31]==0 && B[31]==0 && res[31]==1) ||
-                   (A[31]==1 && B[31]==1 && res[31]==0)) //Options for overflow = 1
-                   V_flag = 1;
-                else 
-                   V_flag = 0;
-            end
-         4'b1100: //ORR
-         	begin
-                res = A | B;
-                C_flag = Cin;
-            end
-         4'b1101: // MOV
-         	begin
-                res = B;
-                C_flag = Cin;
-            end
-         4'b1110: //BIC
-         	begin
-                res = A & ~B;
-                C_flag = Cin;
-            end
-         4'b1111: // MVN
-         	begin
-                res = ~B;
-                C_flag = Cin;
-            end
-         endcase
-         N_flag = res[31];
-         if(res == 0)
-            Z_flag = 1;
-         else
-            Z_flag = 0;
-    end
-endmodule
+	task update_N_Z_flags; //Update the N & Z flags
+	begin
+	N_flag = result[31];
+	if(result == 0) 
+	Z_flag = 1;
+	else 
+	Z_flag = 0;
+	end
+	endtask
+
+	endmodule
 
 
 //--------------------------------------------------------------------
@@ -181,7 +197,7 @@ reg [5:0] nxSt;
 
 //Components Created
 
-PipelineRegister pipe_reg (tempPipe, rom_out, clk);
+control_register pipe_reg (tempPipe, rom_out, clk);
 
 input_manager input_man (im_out, flags, cu_in [31:28]);
 
@@ -193,7 +209,7 @@ mux_2to1_6bits MuxK (Mk_out, reset, ZERO, Mj_out);
 
 encoder enc (enc_out, tempIR, clk);
 
-Microstore_ROM rom (rom_out, Mk_out);
+microstore rom (rom_out, Mk_out);
 
 incrementer inc (inc_out, Mk_out);
 
@@ -207,7 +223,8 @@ Inverter inverter (inv_out, Mh_out, tempPipe[54]);
 
 always @ (*)
 begin	
-cu_out <= tempPipe[53:9];
+//cu_out <= {tempPipe[53:9]};
+cu_out <= {tempPipe[46:19], tempPipe[54:50], tempPipe[18:9], tempPipe[49:48]};
 tempIR <= cu_in;	
 end
 
@@ -216,20 +233,20 @@ endmodule
 //--------------------------------------------------------------------
 //					DATA PATH
 //--------------------------------------------------------------------
-module DataPath(output reg mfc, output reg [31:0] IR_Out, StaReg_Out, input [3:0] cu_opcode, write_cu, readA_cu, readB_cu, input [1:0] Ma, dataType, imme_SEL, Mg,
-	input RFen, Mb, Mc, Md, Me, Mf, Mo, Ms, Ml, MAREn, MDREn, IREn, SHFen, SignExtEn, SignExtEn2, r_w, MemEN, dwp, mfa, clk, clr, StatusRegEn_cu);
+module DataPath(output reg mfc, output reg [31:0] IR_Out, StaReg_Out, input [3:0] OpC_cu, SC_cu, SA_cu, SB_cu, input [1:0] MA, dataType, imme_SEL, MG,
+	input RF_en, MB, MC, MD, ME, MF, MO, MS, ML, MAR_en, MDR_en, IR_en, SHIFT_en, SignExtEn, SE2_en, R_W, RAM_en, dwp, MFA, clk, clr, StatusRegEn_cu);
 
 //Wires connected to other components
 
-wire [31:0] RFOut_A, RFOut_B, BranchExt_Out, SignExt_Out, Ma_Out, Mb_Out, Mc_Out, Md_Out, Me_Out, 
-SignExt_Out2, ALU_Out, Shf_Out, MDR_Out, MAR_Out, MemOut, Flags;
+wire [31:0] RFOut_A, RFOut_B, BranchExt_Out, SignExt_Out, MA_out, MB_out, MC_out, MD_out, ME_out, 
+SE2_out, ALU_out, SHIFT_out, MDR_Out, MAR_Out, RAM_out, Flags;
 
-wire [3:0] write, readA, readB, opcode_in, Ml_out;
+wire [3:0] SC, SA, SB, OpC_in, Ml_out;
 reg carry;
 wire StatusRegEn;
 
-//assign write = wireIR[15:12];
-assign write = Ml_out;
+//assign SC = wireIR[15:12];
+assign SC = Ml_out;
 
 //Temp variables
 
@@ -250,49 +267,50 @@ end
 
 //Components created
 
-register_file regf(RFOut_A, RFOut_B, ALU_Out, readA, readB, write, RFen, clr, clk);
+register_file regf(RFOut_A, RFOut_B, ALU_out, SA, SB, SC, RF_en, clr, clk);
 
-mux_4to1 MuxA (Ma_Out, Ma, RFOut_B, MDR_Out, Mb_Out, temp4);
+mux_4to1 mux_A (MA_out, MA, RFOut_B, MDR_Out, MB_out, temp4);
 
-mux_2to1 MuxB (Mb_Out, Mb, BranchExt_Out, SignExt_Out);
+mux_2to1 mux_B (MB_out, MB, BranchExt_Out, SignExt_Out);
 
-mux_2to1 MuxC (Mc_Out, Mc, ALU_Out, MemOut);
+mux_2to1 mux_C (MC_out, MC, ALU_out, RAM_out);
 
-mux_2to1 MuxD (Md_Out, Md, Me_Out, RFOut_A);
+mux_2to1 mux_D (MD_out, MD, ME_out, RFOut_A);
 
-mux_2to1 MuxE (Me_Out, Me, wireIR, wireIR);
+mux_2to1 mux_E (ME_out, ME, wireIR, wireIR);
 
-mux_2to1_4bits MuxF (readA, Mf, readA_cu, wireIR[19:16]);
+mux_2to1_4bits mux_F (SA, MF, SA_cu, wireIR[19:16]);
 
-mux_4to1_4bits MuxG (readB, Mg, readB_cu, wireIR[3:0], wireIR[15:12], wireIR[19:16]);
+mux_4to1_4bits mux_G (SB, MG, SB_cu, wireIR[3:0], wireIR[15:12], wireIR[19:16]);
 
-mux_2to1_4bits MuxL (Ml_out, Ml, write_cu, wireIR[15:12]);
+mux_2to1_4bits mux_L (Ml_out, ML, SC_cu, wireIR[15:12]);
 
-mux_2to1_4bits MuxO (opcode_in, Mo, cu_opcode, wireIR[24:21]);
+mux_2to1_4bits mux_O (OpC_in, MO, OpC_cu, wireIR[24:21]);
 
-mux_2to1_1bit MuxS (StatusRegEn, Ms, StatusRegEn_cu, ~wireIR[20]);
+mux_2to1_1bit mux_S (StatusRegEn, MS, StatusRegEn_cu, ~wireIR[20]);
 
-ALU alu (ALU_Out, Flags [0], Flags [1], Flags[2], Flags [3], opcode_in, RFOut_A, Shf_Out, carry);
+arm_alu alu (ALU_out, Flags [0], Flags [1], Flags[2], Flags [3], OpC_in, RFOut_A, SHIFT_out, carry);
 
 branch_extender branchExt (BranchExt_Out, wireIR[23:0]);
 
 Imme_Sign_Extension signExt (SignExt_Out, wireIR, SignExtEn, imme_SEL);
 
-Sign_Extension2 signExt2 (SignExt_Out2, Mc_Out, dataType, SignExtEn2);
+Sign_Extension2 signExt2 (SE2_out, MC_out, dataType, SE2_en);
 
-Shifter shift (Shf_Out, Flags [2], Ma_Out, wireIR[6:5], Md_Out, SHFen);
+Shifter shift (SHIFT_out, Flags [2], MA_out, wireIR[6:5], MD_out, SHIFT_en);
 
-register_32bits InsReg (wireIR, MemOut, IREn, clr, clk);
+register_32_bits InsReg (wireIR, RAM_out, IR_en, clr, clk);
 
-register_32bits StaReg (tempStaReg, Flags, StatusRegEn, clr, clk);
+register_32_bits StaReg (tempStaReg, Flags, StatusRegEn, clr, clk);
 
-register_32bits Mar (MAR_Out, ALU_Out, MAREn, clr, clk);
+register_32_bits Mar (MAR_Out, ALU_out, MAR_en, clr, clk);
 
-register_32bits Mdr (MDR_Out, SignExt_Out2, MDREn, clr, clk);
+register_32_bits Mdr (MDR_Out, SE2_out, MDR_en, clr, clk);
 
-Ram ram (MDR_Out, MemEN, r_w, mfa, dataType, dwp, MAR_Out [7:0], tempMfc, MemOut);
+Ram ram (MDR_Out, RAM_en, R_W, MFA, dataType, dwp, MAR_Out [7:0], tempMfc, RAM_out);
 
 endmodule
+
 
 
 //--------------------------------------------------------------------
@@ -311,7 +329,6 @@ end
 else if(in == 4'b0010) begin
 	out = 16'b0000000000000100;
 end 
-
 
 else if(in == 4'b0011) begin
 	out = 16'b0000000000001000;;
@@ -349,7 +366,6 @@ else if(in == 4'b1011) begin
 	out = 16'b0000100000000000;
 end 
 
-
 else if(in == 4'b1100) begin
 	out = 16'b0001000000000000;
 end 
@@ -380,12 +396,10 @@ end
 endmodule
 
 
-
 //--------------------------------------------------------------------
 //					Encoder
 //--------------------------------------------------------------------
 module encoder (output reg [5:0] enc_out, input [31:0] enc_in, input clk);
-
 
 reg [31:0] tempEnc_in;
 
@@ -403,12 +417,10 @@ begin
 		enc_out = 6'b000101; 
 	end
 
-
 	//7 = Shift by Immediate Shifter Operand
 	else if (tempEnc_in[27:25] == 3'b000 && tempEnc_in[4] == 1'b0 && tempEnc_in[11:7] != 5'b00000) begin 
 		enc_out = 6'b000111; 
 	end
-
 
 	//41 = Immediate Post-Indexed Load MISCELLANEOUS
 	if (tempEnc_in[27:25] == 3'b000 && tempEnc_in[4] == 1'b1 && tempEnc_in[24] == 1'b0 && tempEnc_in[20] == 1'b1) begin
@@ -436,7 +448,6 @@ begin
 		enc_out = 6'b101000; 
 	end
 
-
 	//36 = Immediate Pre-Indexed Store MISCELLANEOUS
 	if (tempEnc_in[27:25] == 3'b000 && tempEnc_in[4] == 1'b1 && tempEnc_in[24] != 1'b0 && tempEnc_in[21] == 1'b1 && tempEnc_in[20] != 1'b1 ) begin
 		enc_out = 6'b100100; 
@@ -452,18 +463,15 @@ begin
 		enc_out = 6'b011000; 
 	end
 
-
 	//16 = Immediate Post-Indexed Store
 	if (tempEnc_in[27:25] == 3'b010 && tempEnc_in[24] == 1'b0 && tempEnc_in[20] != 1'b1 ) begin
 		enc_out = 6'b010000; 
 	end
 
-
 	//20 = Immediate Offset Load
 	if (tempEnc_in[27:25] == 3'b010 && tempEnc_in[24] != 1'b0 && tempEnc_in[21] == 1'b0  && tempEnc_in[20] == 1'b1) begin
 		enc_out = 6'b010100; 
 	end
-
 
 	//20 = Immediate Offset Load
 	if (tempEnc_in[27:25] == 3'b010 && tempEnc_in[24] != 1'b0 && tempEnc_in[21] == 1'b0  && tempEnc_in[20] != 1'b1) begin
@@ -515,14 +523,12 @@ begin
 		enc_out = 6'b101011; 
 	end
 
-
 	//44 = Branch with Link
 	if (tempEnc_in[27:25] == 3'b101 && tempEnc_in[24] != 1'b0) begin
 		enc_out	= 6'b101100; 
 	end
 
 	if (tempEnc_in == 31'h00000000) begin
-
 		enc_out=6'b000000;
 	end
 
@@ -633,111 +639,90 @@ Flags[3] = Overflow Flag
 always @ (*)
 begin
 
-case (cond_Code)
-	//EQ
-	4'b0000: 
-	begin
+//EQ - Equal - Flags tested: Z=1
+if (cond_Code == 4'b0000) begin
 	out = Flags[1];
-	end 
-	
-	//NE
-	4'b0001:
-	begin
+end
+
+//NE - Not equal - Flags tested: Z=1
+else if (cond_Code == 4'b0001) begin
 	out = ~Flags[1];
-	end 
-	
-	//CS/HS
-	4'b0010:
-	begin
-	out = Flags[2];
-	end 
-	
-	//CC/LO
-	4'b0011: 
-	begin
+end
+
+//CS/HS - Unsigned higher or same - Flags tested: C=1
+else if (cond_Code == 4'b0010) begin
 	out = ~Flags[2];
-	end 
-	
-	//MI
-	4'b0100:
-	begin
+end
+
+//CC/LO - Unsigned lower - Flags tested: C=0
+else if (cond_Code == 4'b0011) begin
+	out = ~Flags[2];
+end
+
+//MI - Minus = Flags tested: N=1
+else if (cond_Code == 4'b0100) begin
 	out = Flags[0];
-	end 
-	
-	//PL
-	4'b0101:
-	begin
+end
+
+//PL - Positive or Zero - Flags tested: N=0
+else if (cond_Code == 4'b0101) begin
 	out = ~Flags[0];
-	end 
-	
-	//VS
-	4'b0110:
-	begin
+end
+
+//VS - Overflow - Flags tested: V=1
+else if (cond_Code == 4'b0110) begin
 	out = Flags[3];
-	end 
-	
-	//VC
-	4'b0111:
-	begin
+end
+
+//VC - No overflow - Flags tested: V=0
+else if (cond_Code == 4'b0111) begin
 	out = ~Flags[3];
-	end 
-	
-	//HI
-	4'b1000:
-	begin
+end
+
+//HI - Unsigned higher - C=1 & Z=0
+else if (cond_Code == 4'b1000) begin
 	out = Flags[2] & ~Flags[1];
-	end 
-	
-	//LS
-	4'b1001:
-	begin
+end
+
+//LS - Unsigned lower or same - Flags tested: C=0 or Z=1
+else if (cond_Code == 4'b1001) begin
 	out = ~Flags[2] | Flags[1];
-	end 
-	
-	//GE
-	4'b1010:
-	begin
+end
+
+//GE - Greater or equal - N=V
+else if (cond_Code == 4'b1010) begin
 	out = ~(Flags[0] ^ Flags[3]);
-	end 
-	
-	//LT
-	4'b1011:
-	begin
+end
+
+//LT - Less than - Flags tested: N!=V
+else if (cond_Code == 4'b1011) begin
 	out = Flags[0] ^ Flags[3];
-	end 
-	
-	//GT
-	4'b1100:
-	begin
+end
+
+//GT - Greater than - Flags tested: Z=0 & N=V
+else if (cond_Code == 4'b1100) begin
 	out = ~(Flags[0] ^ Flags[3]) & (~Flags[1]);
-	end 
-	
-	//LE
-	4'b1101:
-	begin
+end
+
+//LE - Less than or equal - Flags tested: Z=1 or N=!V
+else if (cond_Code == 4'b1101) begin
 	out = (Flags[0] ^ Flags[3]) | (Flags[1]);
-	end 
-	
-	//AL
-	4'b1110:
-	begin
+end
+
+//AL - Always
+else if (cond_Code == 4'b1110) begin
 	out = 1'b1;
-	end 
-	
-	//**NOT USED**
-	4'b1111:
-	begin
-	end 
-	
-	endcase
-	end 
+end
 
-	endmodule
+
+end 
+
+endmodule
 
 
 
-	/********************************************************************************/
-	/*					                 Inverter                                   */
+/********************************************************************************/
+/*					                 Inverter                                   */
 //Input
 //in: lo que sale del MUX 2x1
 //invtr: inv
@@ -769,10 +754,10 @@ wire [44:0] cu_out;
 reg clk, clr;
 
 //Module Instantiation
-DataPath datapath (.mfc(mfc), .IR_Out(IR_Out), .StaReg_Out(StaReg_Out), .cu_opcode(cu_out[30:27]), .write_cu(cu_out[42:39]), .readA_cu(cu_out[38:35]), .readB_cu(cu_out[34:31]), 
-	.Ma(cu_out[26:25]), .dataType(cu_out[9:8]), .imme_SEL(cu_out[1:0]), .RFen(cu_out[44]), .Mb(cu_out[20]), .Mc(cu_out[19]), .Md(cu_out[18]), .Me(cu_out[17]), .Mf(cu_out[16]), 
-	.Mg(cu_out[15:14]), .Mo(cu_out[12]), .Ms(cu_out[22]), .Ml(cu_out[13]), .MAREn(cu_out[4]), .MDREn(cu_out[3]), .IREn(cu_out[5]), .SHFen(cu_out[24]), .SignExtEn(cu_out[21]), 
-	.SignExtEn2(cu_out[2]), .r_w(cu_out[11]), .MemEN(cu_out[10]), .dwp(cu_out[7]), .mfa(cu_out[6]), .clk(clk), .clr(clr), .StatusRegEn_cu(cu_out[23]));
+DataPath datapath (.mfc(mfc), .IR_Out(IR_Out), .StaReg_Out(StaReg_Out), .OpC_cu(cu_out[30:27]), .SC_cu(cu_out[42:39]), .SA_cu(cu_out[38:35]), .SB_cu(cu_out[34:31]), 
+	.MA(cu_out[26:25]), .dataType(cu_out[9:8]), .imme_SEL(cu_out[1:0]), .RF_en(cu_out[44]), .MB(cu_out[20]), .MC(cu_out[19]), .MD(cu_out[18]), .ME(cu_out[17]), .MF(cu_out[16]), 
+	.MG(cu_out[15:14]), .MO(cu_out[12]), .MS(cu_out[22]), .ML(cu_out[13]), .MAR_en(cu_out[4]), .MDR_en(cu_out[3]), .IR_en(cu_out[5]), .SHIFT_en(cu_out[24]), .SignExtEn(cu_out[21]), 
+	.SE2_en(cu_out[2]), .R_W(cu_out[11]), .RAM_en(cu_out[10]), .dwp(cu_out[7]), .MFA(cu_out[6]), .clk(clk), .clr(clr), .StatusRegEn_cu(cu_out[23]));
 
 control_unit cu (.cu_out(cu_out), .clk(clk), .reset(clr), .mfc(mfc), .cu_in(IR_Out), .flags(StaReg_Out [3:0]));
 
@@ -853,7 +838,7 @@ temp_data_in[15:8] <= dat[i[7:0]+2];
 //					MICROSTORE (ROM)
 //--------------------------------------------------------------------
 
-module Microstore_ROM (output reg[54:0] out, input [5:0] index);
+module microstore (output reg[54:0] out, input [5:0] index);
 
 initial begin
 	//index =  6'b000001;
@@ -863,139 +848,124 @@ initial begin
 	begin
 	
 	if(index==6'b000000) begin
-		out = 55'b0100000000000001101001101010000010011000111100000001010;
+		out = 55'b0001000010000000000000110100110101000110001111000001010;
 	end
 	if(index==6'b000001) begin
-	    out = 55'b0110000111111111101001101010010000011000101100000010011;
+	    out = 55'b1001000011000011111111110100110101000110001011000010011;
 	end
 	if(index==6'b000010) begin
-		out = 55'b0011111111111110100111101010000000001000111100000010011;
+		out = 55'b0000000001111111111111010011110101000010001111000010011;
 	end
 	if(index==6'b000011) begin
-		out = 55'b1111111111111111101111101010000000001001010100000011101;
+		out = 55'b0000000111111111111111110111110101000010010101000011101;
 	end
 	if(index==6'b000100) begin
-		out = 55'b0111111111111111101111101010000000001000111100000001000;
+		out = 55'b0000000011111111111111110111110101000010001111000001000;
 	end
 	if(index==6'b000101) begin
-		out = 55'b0010000000000000000001011010010111011000111100000001001;
+		out = 55'b1011100001000000000000000000101101000110001111000001001;
 	end
 	if(index==6'b000110) begin
-		out = 55'b0010000000000000000101011110010111011000111100000001001;
+		out = 55'b1011100001000000000000000010101101000110001111000001001;
 	end
 	if(index==6'b000111) begin
-		out = 55'b0010000000000000000101011100110111011000111100000001001;
+		out = 55'b1011100001000000000000000010101100010110001111000001001;
 	end
 	if(index==6'b001000) begin
-		out = 55'b1110000000000001101011101010010110000001110101001000101;
+		out = 55'b1011001111000000000000110101110101000000011101001000101;
 	end
 	if(index==6'b001001) begin
-		out = 55'b0010000000000001101011101000010110011000111101000001001;
+		out = 55'b1011001001000000000000110101110100000110001111000001001;
 	end
 	if(index==6'b001010) begin
-		out = 55'b0110000000000001101001101000011010011000110101001011011;
+		out = 55'b1101001011000000000000110100110100000110001101001011011;
 	end
 	if(index==6'b001011) begin
-		out = 55'b1110000000000001101001101000011010100011111101001011111;
+		out = 55'b1101001111000000000000110100110100001000001111001011111;
 	end
 	if(index==6'b001100) begin
-		out = 55'b0110000000000000100101100100010110011000101101001010010;
+		out = 55'b1011001011000000000000010010110010000110001011001010010;
 	end
 	if(index==6'b001101) begin
-		out = 55'b0110000000000000100001101000010110011000101101001010010;
+		out = 55'b1011001011000000000000010000110100000110001011001010010;
 	end
 	if(index==6'b001110) begin
-		out = 55'b0010000000000000100101101000010110011000101101001010010;
+		out = 55'b1011001001000000000000010010110100000110001011001010010;
 	end
 	if(index==6'b001111) begin
-		out = 55'b0010000000000000100001101000010110011000101101001010010;
+		out = 55'b1011001001000000000000010000110100000110001011001010010;
 	end
 	if(index==6'b010000) begin
-		out = 55'b0110000000000001101001101000010110011000101101010001011;
+		out = 55'b1011001011000000000000110100110100000110001011010001011;
 	end
 	if(index==6'b010001) begin
-		out = 55'b0010000000000000100101101000010110011000111101001010010;
+		out = 55'b1011001001000000000000010010110100000110001111001010010;
 	end
 	if(index==6'b010010) begin
-		out = 55'b0110000000000001101001101000010110011000101101010011011;
+		out = 55'b1011001011000000000000110100110100000110001011010011011;
 	end
 	if(index==6'b010011) begin
-		out = 55'b0010000000000000100001101000010110011000111101001010010;
+		out = 55'b1011001001000000000000010000110100000110001111001010010;
 	end
 	if(index==6'b010100) begin
-		out = 55'b0110000000000000100101100100010110011000101101001000010;
+		out = 55'b1011001011000000000000010010110010000110001011001000010;
 	end
 	if(index==6'b010101) begin
-		out = 55'b0110000000000000100001101000010110011000101101001000010;
+		out = 55'b1011001011000000000000010000110100000110001011001000010;
 	end
 	if(index==6'b010110) begin
-		out = 55'b0010000000000000100101101000010110011000101101001000010;
+		out = 55'b1011001001000000000000010010110100000110001011001000010;
 	end
 	if(index==6'b010111) begin
-		out = 55'b0010000000000000100001101000010110011000101101001000010;
+		out = 55'b1011001001000000000000010000110100000110001011001000010;
 	end
 	if(index==6'b011000) begin
-		out = 55'b0110000000000001101001101000010110011000101101011001011;
+		out = 55'b1011001011000000000000110100110100000110001011011001011;
 	end
 	if(index==6'b011001) begin
-		out = 55'b0010000000000000100101101000010110011000111101001000010;
+		out = 55'b1011001001000000000000010010110100000110001111001000010;
 	end
 	if(index==6'b011010) begin
-		out = 55'b0110000000000001101001101000010110011000101101011011011;
+		out = 55'b1011001011000000000000110100110100000110001011011011011;
 	end
 	if(index==6'b011011) begin
-		out = 55'b0010000000000000100001101000010110011000111101001000010;
+		out = 55'b1011001001000000000000010000110100000110001111001000010;
 	end
 	if(index==6'b011100) begin
-		out = 55'b1110000000000001101001101010010110000001110011011100101;
+		out = 55'b1011011111000000000000110100110101000000011100011100101;
 	end
 	if(index==6'b011101) begin
-		out = 55'b0010000000000001101011101000010110011000111111000001001;
+		out = 55'b1011011001000000000000110101110100000110001111000001001;
 	end
 	if(index==6'b011110) begin
-		out = 55'b0110000000000001101001101000011010011000110011011111011;
+		out = 55'b1101001011000000000000110100110100000110001100011111011;
 	end
 	if(index==6'b011111) begin
-		out = 55'b1110000000000001101001101000011010100000111111011111111;
+		out = 55'b1101001111000000000000110100110100001000001111011111111;
 	end
 	if(index==6'b100000) begin
-		out = 55'b0011111111111110100101101000000000011000111110000001001;
+		out = 55'b1011011011000000000000010010110000000110001011011110010;
 	end
 	if(index==6'b100001) begin
-		out = 55'b0011110111111111101001101000000000011000111110100010011;
+		out = 55'b1011011001000000000000010010110100000110001011011110010;
 	end
 	if(index==6'b100010) begin
-		out = 55'b0011111111111110100101101100000000011000111110000001001;
+		out = 55'b1011001011000000000000110100110100000110001011100011011;
 	end
 	if(index==6'b100011) begin
-		out = 55'b0110000000000000100101100000010110011000101111011110010;
+		out = 55'b1011001001000000000000010010110100000110001111011110010;
 	end
 	if(index==6'b100100) begin
-		out = 55'b0010000000000000100101101000010110011000101111011110010;
+		out = 55'b1011011011000000000000010010110000000110001011011100010;
 	end
 	if(index==6'b100101) begin
-		out = 55'b0110000000000001101001101000010110011000101111100110011;
+		out = 55'b1011011001000000000000010010110100000110001011011100010;
 	end
 	if(index==6'b100110) begin
-		out = 55'b0010000000000000100101101000010110011000111111011110010;
+		out = 55'b1011011011000000000000110100110100000110001011100111011;
 	end
-	if(index==6'b1000111) begin
-		out = 55'b0110000000000000100101100000010110011000101111011100010;
-	end
-	if(index==6'b101000) begin
-		out = 55'b0010000000000000100101101000010110011000101111011100010;
-	end
-	if(index==6'b101001) begin
-		out = 55'b0110000000000001101001101000010110011000101111101001011;
-	end
-	if(index==6'b101010) begin
-		out = 55'b0010000000000000100101101000010110011000111111011100010;
-	end
-	if(index==6'b101011) begin
-		out = 55'b0110000000000001101001101000010110011000111111100000111;
-	end
-	if(index==6'b101100) begin
-		out = 55'b0110000000000001101001101000010110011000111111100001111;
+	if(index==6'b100011) begin
+		out = 55'b1011011001000000000000010010110100000110001111011100010;
 	end
 	end
 
@@ -1018,13 +988,15 @@ module mux_2to1_1bit (output reg Y, input S,
 	input D0, input D1);
 
 always @ (S,D0,D1)
+begin
+if(S==1'b0) begin
+	Y = D0;
+end 
+if(S==1'b1) begin
+	Y = D1;
+end  
+end
 
-case (S)
-
-1'b0:   Y = D0;
-1'b1:   Y = D1;
-
-endcase
 
 endmodule
 
@@ -1034,12 +1006,14 @@ module mux_2to1_4bits (output reg [3:0] Y, input S,
 	input [3:0] D0, input [3:0] D1);
 
 always @ (S,D0,D1)
-
-case (S)
-1'b0:   Y = D0;
-1'b1:   Y = D1;
-endcase
-
+begin
+if(S==1'b0) begin
+	   Y = D0;
+end
+if(S==1'b1) begin
+	   Y = D1;
+end
+end
 endmodule
 
 
@@ -1050,13 +1024,20 @@ module mux_4to1_4bits (output reg [3:0] Y, input [1:0] S,
 	input [3:0] D0, input [3:0] D1, input [3:0] D2, input [3:0] D3);
 
 always @ (S,D0,D1)
-
-case (S)
-2'b00:   Y = D0;
-2'b01:   Y = D1;
-2'b10:	 Y = D2;
-2'b11:	 Y = D3;
-endcase
+begin
+if(S==2'b00) begin
+	Y = D0;
+end
+if(S==2'b01) begin
+	Y = D1;
+end
+if(S==2'b10) begin
+	Y = D2;
+end
+if(S==2'b11) begin
+	Y = D3;
+end
+end
 
 endmodule
 
@@ -1066,15 +1047,20 @@ module mux_4to1_5bits (output reg [4:0] Y, input [1:0] S,
 	input [4:0] D0, input [4:0] D1, input [4:0] D2, input [4:0] D3);
 
 always @ (S,D0,D1,D2,D3)
-
-case (S)
-
-2'b00:   Y = D0;
-2'b01:   Y = D1;
-2'b10:   Y = D2;
-2'b11:   Y = D3;
-
-endcase
+begin
+if(S==2'b00) begin
+	Y = D0;
+end
+if(S==2'b01) begin
+	Y = D1;
+end
+if(S==2'b10) begin
+	Y = D2;
+end
+if(S==2'b11) begin
+	Y = D3;
+end
+end
 
 endmodule
 
@@ -1086,12 +1072,14 @@ module mux_2to1_5bits (output reg [4:0] Y, input S,
 
 always @ (S,D0,D1)
 
-case (S)
-
-1'b0:   Y = D0;
-1'b1:   Y = D1;
-
-endcase
+begin
+if(S==1'b0) begin
+	   Y = D0;
+end
+if(S==1'b1) begin
+	   Y = D1;
+end
+end
 
 endmodule
 
@@ -1113,17 +1101,22 @@ module mux_4to1_6bits (output reg [5:0] Y, input [1:0] S,
 	input [5:0] D0, input [5:0] D1, input [5:0] D2, input [5:0] D3);
 
 always @ (S,D0,D1,D2,D3)
-
-case (S)
-
-2'b00:   Y = D0;
-2'b01:   Y = D1;
-2'b10:   Y = D2;
-2'b11:   Y = D3;
-
-endcase
-
+begin
+if(S==2'b00) begin
+	Y = D0;
+end
+if(S==2'b01) begin
+	Y = D1;
+end
+if(S==2'b10) begin
+	Y = D2;
+end
+if(S==2'b11) begin
+	Y = D3;
+end
+end
 endmodule
+
 
 /********************************************************************************/
 /*					                   Mux 3                                    */
@@ -1139,13 +1132,14 @@ module mux_2to1_6bits (output reg [5:0] Y, input S,
 	input [5:0] D0, input [5:0] D1);
 
 always @ (S,D0,D1)
-
-case (S)
-
-1'b0:   Y = D0;
-1'b1:   Y = D1;
-
-endcase
+begin
+if(S==1'b0) begin
+	   Y = D0;
+end
+if(S==1'b1) begin
+	   Y = D1;
+end
+end
 
 endmodule
 
@@ -1156,57 +1150,57 @@ endmodule
 module mux_16to1 (output reg [31:0] Y, input [3:0] S, input [31:0] D0, D1, D2, D3, D4, D5, D6, D7, D8, D9, D10, D11, D12, D13, D14, D15);
 
 always @ (S,D0,D1,D2,D3,D4,D5,D6,D7,D8,D9,D10,D11,D12,D13,D14,D15)
-
 begin
-if(S==4'b0000) begin
+if(S==4'b0000)begin
 	Y = D0;
 end
-if(S==4'b0001) begin
+if(S==4'b0001)begin
 	Y = D1;
 end
-if(S==4'b0010) begin
+if(S==4'b0010)begin
 	Y = D2;
 end
-if(S==4'b0011) begin
+if(S==4'b0011)begin
 	Y = D3;
 end
-if(S==4'b0100) begin
+if(S==4'b0100)begin
 	Y = D4;
 end
-if(S==4'b0101) begin
+if(S==4'b0101)begin
 	Y = D5;
 end
-if(S==4'b0110) begin
+if(S==4'b0110)begin
 	Y = D6;
 end
-if(S==4'b0111) begin
+if(S==4'b0111)begin
 	Y = D7;
 end
-if(S==4'b1000) begin
+if(S==4'b1000)begin
 	Y = D8;
 end
-if(S==4'b1001) begin
+if(S==4'b1001)begin
 	Y = D9;
 end
-if(S==4'b1010) begin
+if(S==4'b1010)begin
 	Y = D10;
 end
-if(S==4'b1011) begin
+if(S==4'b1011)begin
 	Y = D11;
 end
-if(S==4'b1100) begin
+if(S==4'b1100)begin
 	Y = D12;
 end
-if(S==4'b1101) begin
+if(S==4'b1101)begin
 	Y = D13;
 end
-if(S==4'b1110) begin
+if(S==4'b1110)begin
 	Y = D14;
 end
-if(S==4'b1111) begin
+if(S==4'b1111)begin
 	Y = D15;
 end
 end
+
 endmodule
 
 
@@ -1219,15 +1213,20 @@ module mux_4to1 (output reg [31:0] Y, input [1:0] S,
 	input [31:0] D0, input [31:0] D1, input [31:0] D2, input [31:0] D3);
 
 always @ (S,D0,D1,D2,D3)
-
-case (S)
-
-2'b00:   Y = D0;
-2'b01:   Y = D1;
-2'b10:   Y = D2;
-2'b11:   Y = D3;
-
-endcase
+begin
+if(S==2'b00) begin
+	Y = D0;
+end
+if(S==2'b01) begin
+	Y = D1;
+end
+if(S==2'b10) begin
+	Y = D2;
+end
+if(S==2'b11) begin
+	Y = D3;
+end
+end
 
 endmodule
 
@@ -1237,13 +1236,14 @@ module mux_2to1 (output reg [31:0] Y, input S,
 	input [31:0] D0, input [31:0] D1);
 
 always @ (S,D0,D1)
-
-case (S)
-
-1'b0:   Y = D0;
-1'b1:   Y = D1;
-
-endcase
+begin
+if(S==1'b0) begin
+	   Y = D0;
+end
+if(S==1'b1) begin
+	   Y = D1;
+end
+end
 
 endmodule
 
@@ -1267,33 +1267,34 @@ end
 
 
 always @ (*)
-case (pipeline)
+begin
 
-	3'b000: //Encoder
+
+	if(pipeline==3'b000) //Encoder
 	begin
 	M0 = 1'b0;
 	M1 = 1'b0;
 	end
 	
-	3'b001: //Fetch
+	if(pipeline==3'b001) //Fetch
 	begin
 	M0 = 1'b1;
 	M1 = 1'b0;
 	end
 	
-	3'b010: //Pipeline
+	if(pipeline==3'b010) //Pipeline
 	begin
 	M0 = 1'b0;
 	M1 = 1'b1;
 	end
 	
-	3'b011: //Incrementer 
+	if(pipeline==3'b011) //Incrementer 
 	begin
 	M0 = 1'b1;
 	M1 = 1'b1;
 	end
 	
-	3'b100:
+	if(pipeline==3'b100)
 	begin
 	if(cond_S == 1'b1)
 	begin
@@ -1307,7 +1308,7 @@ case (pipeline)
 	end 
 	end	
 	
-	3'b101:
+	if(pipeline==3'b101)
 	begin
 	if(cond_S == 1'b1)
 	begin
@@ -1321,7 +1322,7 @@ case (pipeline)
 	end
 	end
 	
-	3'b110:
+	if(pipeline==3'b110)
 	begin
 	if(cond_S == 1'b1)
 	begin
@@ -1335,7 +1336,7 @@ case (pipeline)
 	end
 	end
 	
-	3'b111:
+	if(pipeline==3'b111)
 	begin
 	if(cond_S == 1'b1)
 	begin
@@ -1348,7 +1349,8 @@ case (pipeline)
 	M1 = 1'b0;
 	end
 	end
-	endcase
+	end
+	
 
 	endmodule
 
@@ -1357,139 +1359,153 @@ case (pipeline)
 //				PIPELINE REGISTER
 //--------------------------------------------------------
 
-module PipelineRegister (output reg [54:0] out, input [54:0] pipeline_in, input clk);
+module control_register (output reg [54:0] out, input [54:0] pipeline_in, input clk);
 
 always @(posedge clk)	
-out <= pipeline_in;	
-
+	out <= pipeline_in;	
 endmodule
+
 
 //--------------------------------------------------------
 //				RAM 256
 //--------------------------------------------------------
 module Ram (
-	input [31:0] data_in   , 
+	input [31:0] input_data   , 
 	input enable,
-	input r_w , 
-	input mfa,
-	input [1:0] dtype,
-	input _dwp1, 
-	input [7:0] addr,
-	output reg mfc,
-	output reg [31:0] data_out         
+	input read_write , 
+	input memory_active,
+	input [1:0] word_type,
+	input double_div, 
+	input [7:0] address,
+	output reg memory_complete,
+	output reg [31:0] output_data         
 	);
-
-
 
 
 reg [7:0] ram[0:255];
 
-reg [7:0] t_addr;
+reg [7:0] temp_address;
 
-// constants
+// definitions
 parameter BYTE = 2'b00;
-parameter HALF = 2'b01;
+parameter HALF_WORD = 2'b01;
 parameter WORD = 2'b10;
-parameter DWORD = 2'b11;
+parameter DOUBLE_WORD = 2'b11;
 parameter WRITE = 1'b1;
 parameter READ = 1'b0;
 parameter ENABLE = 1'b0;
 
 
 
-always@(mfa)
+always@(memory_active)
 begin
+
+
+
 if(enable == 0) begin
-case(dtype)
-BYTE:begin
-if(r_w==WRITE)begin
-ram[addr] <= data_in[7:0];
-end
 
-data_out <= {{24{1'b0}}, ram[addr]};
-end
-HALF:begin
-t_addr[7:1] <= addr[7:1];
-t_addr[0] <= 1'b0;
-#5;
-if(r_w==WRITE)begin
-ram[addr] <= data_in[15:8];
-ram[addr+1] <= data_in[7:0];
-#3;
-end
+case(word_type)
 
-data_out <= {{16{1'b0}}, ram[addr], ram[addr+1] };
-#3;
-end
-WORD:begin
-t_addr[7:2] <= addr[7:2];
-t_addr[1:0] <= 2'b00;
-#1;
-
-if(r_w==WRITE)begin
-ram[t_addr] <= data_in[31:24];
-ram[t_addr+1] <= data_in[23:16];
-ram[t_addr+2] <= data_in[15:8];
-ram[t_addr+3] <= data_in[7:0];
-#1;
-end 
-
-data_out[31:24] <= ram[t_addr];
-data_out[23:16] <= ram[t_addr+1];
-data_out[15:8] <= ram[t_addr+2];
-data_out[7:0] <= ram[t_addr+3];
-#1;
-end
-DWORD:begin
-t_addr[7:3] <= addr[7:3];
-t_addr[2:0] <= 3'b000;
-#5;
-
-if(r_w==WRITE)
+BYTE:
 begin
-if(_dwp1)
-begin
-ram[t_addr] <= data_in[31:24];
-ram[t_addr+1] <= data_in[23:16];
-ram[t_addr+2] <= data_in[15:8];
-ram[t_addr+3] <= data_in[7:0];
-end
-else
-begin
-ram[t_addr+4] <= data_in[31:24];
-ram[t_addr+5] <= data_in[23:16];
-ram[t_addr+6] <= data_in[15:8];
-ram[t_addr+7] <= data_in[7:0];
-end
-#3;
-end 
+	if(read_write==WRITE)
+		begin
+			ram[address] <= input_data[7:0];
+		end
 
-if(_dwp1)
+		output_data <= {{24{1'b0}}, ram[address]};
+end
+
+HALF_WORD:
 begin
-data_out[31:24] <= ram[t_addr];
-data_out[23:16] <= ram[t_addr+1];
-data_out[15:8] <= ram[t_addr+2];
-data_out[7:0] <= ram[t_addr+3];
+	temp_address[7:1] <= address[7:1];
+	temp_address[0] <= 1'b0;
+	#5;
+
+	if(read_write==WRITE)
+	begin
+		ram[address] <= input_data[15:8];
+		ram[address+1] <= input_data[7:0];
+		#3;
+	end
+
+	output_data <= {{16{1'b0}}, ram[address], ram[address+1] };
+	#3;
 end
-else
+
+WORD:
 begin
-data_out[31:24] <= ram[t_addr+4];
-data_out[23:16] <= ram[t_addr+5];
-data_out[15:8] <= ram[t_addr+6];
-data_out[7:0] <= ram[t_addr+7];
+	temp_address[7:2] <= address[7:2];
+	temp_address[1:0] <= 2'b00;
+	#1;
+
+	if(read_write==WRITE)
+	begin
+		ram[temp_address] <= input_data[31:24];
+		ram[temp_address+1] <= input_data[23:16];
+		ram[temp_address+2] <= input_data[15:8];
+		ram[temp_address+3] <= input_data[7:0];
+		#1;
+	end 
+
+	output_data[31:24] <= ram[temp_address];
+	output_data[23:16] <= ram[temp_address+1];
+	output_data[15:8] <= ram[temp_address+2];
+	output_data[7:0] <= ram[temp_address+3];
+	#1;
 end
-#3;
-end
+
+DOUBLE_WORD:
+begin
+	temp_address[7:3] <= address[7:3];
+	temp_address[2:0] <= 3'b000;
+	#5;
+
+	if(read_write==WRITE)
+	begin
+		if(double_div)
+		begin
+			ram[temp_address] <= input_data[31:24];
+			ram[temp_address+1] <= input_data[23:16];
+			ram[temp_address+2] <= input_data[15:8];
+			ram[temp_address+3] <= input_data[7:0];
+		end
+		else
+		begin
+			ram[temp_address+4] <= input_data[31:24];
+			ram[temp_address+5] <= input_data[23:16];
+			ram[temp_address+6] <= input_data[15:8];
+			ram[temp_address+7] <= input_data[7:0];
+		end
+		#3;
+	end 
+
+	if(double_div)
+	begin
+		output_data[31:24] <= ram[temp_address];
+		output_data[23:16] <= ram[temp_address+1];
+		output_data[15:8] <= ram[temp_address+2];
+		output_data[7:0] <= ram[temp_address+3];
+	end
+	else
+	begin
+		output_data[31:24] <= ram[temp_address+4];
+		output_data[23:16] <= ram[temp_address+5];
+		output_data[15:8] <= ram[temp_address+6];
+		output_data[7:0] <= ram[temp_address+7];
+	end
+	#3;
+	end
 endcase
 
-#5 mfc <= 1'b1;
+#5 memory_complete <= 1'b1;
 end
 end
 
-always@(mfa)
+always@(memory_active)
 begin
-if (mfa == 1'b1)
-mfc <= 1'b0;
+if (memory_active == 1'b1)
+memory_complete <= 1'b0;
 end
 
 endmodule
@@ -1497,17 +1513,17 @@ endmodule
 
 
 //--------------------------------------------------------
-//				Register File v2
+//				Register FIle
 //--------------------------------------------------------
-module register_file (output reg [31:0] PA, PB, input [31:0] PC, input [3:0] readA, readB, writeA, input enable, clr, clk);
+module register_file (output reg [31:0] outA, outB, input [31:0] dataIn, input [3:0] readA, readB, writeA, input enable, clr, clk);
 
 reg decoder_enable;
 
-
-wire [31:0] tempA;
-wire [31:0] tempB;
-wire [15:0] dec_out;
-wire [31:0] R0_out,R1_out,R2_out,R3_out,R4_out,R5_out,R6_out,R7_out,R8_out,R9_out,R10_out,R11_out,R12_out,R13_out,R14_out,R15_out;
+wire [31:0] temp;
+wire [31:0] temp1;
+wire [15:0] decoder_out;
+wire [31:0] register_out0, register_out1, register_out2, register_out3, register_out4, register_out5, register_out6, register_out7,
+register_out8, register_out9, register_out10, register_out11, register_out12, register_out13, register_out14, register_out15;
 
 always @ (enable)
 begin 
@@ -1532,36 +1548,39 @@ end
 
 always @ (*)
 begin
-
-	PA = tempA;
-	PB = tempB;
-
+outA = temp;
+outB = temp1;
 end
 
 
+decoder dec (decoder_out, writeA, decoder_enable);
 
-decoder dec (dec_out, writeA, decoder_enable);
+register_32_bits register0 (register_out0, dataIn, ~decoder_out[0], clr, clk);
+register_32_bits register1 (register_out1, dataIn, ~decoder_out[1], clr, clk);
+register_32_bits register2 (register_out2, dataIn, ~decoder_out[2], clr, clk);
+register_32_bits register3 (register_out3, dataIn, ~decoder_out[3], clr, clk);
+register_32_bits register4 (register_out4, dataIn, ~decoder_out[4], clr, clk);
+register_32_bits register5 (register_out5, dataIn, ~decoder_out[5], clr, clk);
+register_32_bits register6 (register_out6, dataIn, ~decoder_out[6], clr, clk);
+register_32_bits register7 (register_out7, dataIn, ~decoder_out[7], clr, clk);
+register_32_bits register8 (register_out8, dataIn, ~decoder_out[8], clr, clk);
+register_32_bits register9 (register_out9, dataIn, ~decoder_out[9], clr, clk);
+register_32_bits register10 (register_out10, dataIn, ~decoder_out[10], clr, clk);
+register_32_bits register11 (register_out11, dataIn, ~decoder_out[11], clr, clk);
+register_32_bits register12 (register_out12, dataIn, ~decoder_out[12], clr, clk);
+register_32_bits register13 (register_out13, dataIn, ~decoder_out[13], clr, clk);
+register_32_bits register14 (register_out14, dataIn, ~decoder_out[14], clr, clk);
+register_32_bits register15 (register_out15, dataIn, ~decoder_out[15], clr, clk);
 
-register_32bits register0  (R0_out, PC, ~dec_out[0], clr, clk);
-register_32bits register1  (R1_out, PC, ~dec_out[1], clr, clk);
-register_32bits register2  (R2_out, PC, ~dec_out[2], clr, clk);
-register_32bits register3  (R3_out, PC, ~dec_out[3], clr, clk);
-register_32bits register4  (R4_out, PC, ~dec_out[4], clr, clk);
-register_32bits register5  (R5_out, PC, ~dec_out[5], clr, clk);
-register_32bits register6  (R6_out, PC, ~dec_out[6], clr, clk);
-register_32bits register7  (R7_out, PC, ~dec_out[7], clr, clk);
-register_32bits register8  (R8_out, PC, ~dec_out[8], clr, clk);
-register_32bits register9  (R9_out, PC, ~dec_out[9], clr, clk);
-register_32bits register10 (R10_out, PC, ~dec_out[10], clr, clk);
-register_32bits register11 (R11_out, PC, ~dec_out[11], clr, clk);
-register_32bits register12 (R12_out, PC, ~dec_out[12], clr, clk);
-register_32bits register13 (R13_out, PC, ~dec_out[13], clr, clk);
-register_32bits register14 (R14_out, PC, ~dec_out[14], clr, clk);
-register_32bits register15 (R15_out, PC, ~dec_out[15], clr, clk);
 
-mux_16to1 muxA (tempA, readA, R0_out, R1_out, R2_out, R3_out, R4_out, R5_out, R6_out, R7_out, R8_out, R9_out, R10_out, R11_out, R12_out, R13_out, R14_out, R15_out);
-mux_16to1 muxB (tempB, readB, R0_out, R1_out, R2_out, R3_out, R4_out, R5_out, R6_out, R7_out, R8_out, R9_out, R10_out, R11_out, R12_out, R13_out, R14_out, R15_out);
 
+
+
+mux_16to1 muxA (temp, readA, register_out0, register_out1, register_out2, register_out3, register_out4, register_out5, register_out6, register_out7,
+	register_out8, register_out9, register_out10, register_out11, register_out12, register_out13, register_out14, register_out15);
+
+mux_16to1 muxB (temp1, readB, register_out0, register_out1, register_out2, register_out3, register_out4, register_out5, register_out6, register_out7,
+	register_out8, register_out9, register_out10, register_out11, register_out12, register_out13, register_out14, register_out15);
 
 endmodule
 
@@ -1569,9 +1588,8 @@ endmodule
 //--------------------------------------------------------------------
 //					Register of 32 bits
 //--------------------------------------------------------------------
-
-module register_32bits (output reg [31:0] Y, input [31:0] I,
-			 input LE, CLR, CLK);
+module register_32_bits (output reg [31:0] Y, input [31:0] I,
+	input LE, CLR, CLK);
 
 always @ (posedge CLK, negedge CLR)
 
@@ -1671,14 +1689,12 @@ module Sign_Extension2 (output reg [31:0] Y, input [31:0] In, input [1:0] Data_T
 
 
 always @ (In, Data_Type)
-
+begin
 if (!enable)
 
 begin
 
-case(Data_Type)
-
-      		    2'b00: //Byte
+      		    if(Data_Type==2'b00) //Byte
 
       		    begin 
 
@@ -1687,7 +1703,7 @@ case(Data_Type)
 
       		    end
 
-         		2'b01: //Halfword
+         		if(Data_Type==2'b01) //Halfword
 
          		begin
 
@@ -1696,7 +1712,7 @@ case(Data_Type)
 
          		end
 
-         		2'b10: //Word
+         		if(Data_Type==2'b10) //Word
 
          		begin
 
@@ -1705,19 +1721,24 @@ case(Data_Type)
          		end
 
 
-         		2'b11: //Doubleword
+         		if(Data_Type==2'b11) //Doubleword
 
          		begin
 
          		assign Y = In;
 
          		end
-         		endcase
-
          		end
+
+         		
 
          		else
 
          		assign Y = In;
-
+end
          		endmodule
+
+
+
+
+
